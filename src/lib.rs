@@ -50,6 +50,9 @@ pub mod files {
                     return;
                 }
             };
+            if ft.is_symlink() {
+                return;
+            }
             let fm = match f.metadata() {
                 Ok(fm) => fm,
                 Err(e) => {
