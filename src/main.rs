@@ -2,6 +2,7 @@ use anyhow::{bail, Result};
 use clap::Parser;
 use std::io;
 use std::process::exit;
+use posix_acl::{PosixACL,Qualifier};
 
 use chowner_rs::files;
 use chowner_rs::pairs;
@@ -42,10 +43,12 @@ fn main() -> Result<()> {
             .num_threads(args.threads)
             .build_global()?;
     }
+
     let uidmap = match pairs::get_map_from_pairs(args.uidpair) {
         Ok(m) => m,
         Err(e) => bail!(e),
     };
+
     let gidmap = match pairs::get_map_from_pairs(args.gidpair) {
         Ok(m) => m,
         Err(e) => bail!(e),
@@ -57,6 +60,12 @@ fn main() -> Result<()> {
         uidmap,
         gidmap,
     };
+
+    if args.modify_acls {
+        let mut acl = PosixACL::read_acl(args.path).unwrap();
+        println!("{:?}", acl.entries());
+        exit(0)
+    }
 
     // just verify before fucking things up
     println!("{ctx:?}");
