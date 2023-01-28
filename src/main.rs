@@ -63,7 +63,9 @@ fn main() -> Result<()> {
 
     if args.modify_acls {
         let mut acl = PosixACL::read_acl(args.path).unwrap();
-        println!("{:?}", acl.entries());
+        for e in acl.entries() {
+            println!("{e:?}")
+        }
         exit(0)
     }
 
