@@ -8,16 +8,15 @@ pub struct Ctx {
 }
 
 pub mod acl {
-    use crate::acl;
     use crate::Ctx;
+    use anyhow::{bail, Result};
     use posix_acl::{PosixACL, Qualifier};
     use std::path::Path;
-    pub fn update_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
-        update_access_acl(&ctx, &path);
-        update_default_acl(&ctx, &path);
-    }
-    fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
-        let mut acl = PosixACL::read_acl(path).unwrap();
+    pub fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        let mut acl = match PosixACL::read_acl(path) {
+            Ok(acl) => acl,
+            Err(e) => bail!("Error reading ACL: {e}"),
+        };
         for entry in acl.entries() {
             match entry.qual {
                 Qualifier::User(uid) => {
@@ -47,10 +46,16 @@ pub mod acl {
                 _ => (),
             }
         }
+        Ok(())
     }
 
-    fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
-        let mut acl = PosixACL::read_default_acl(path).unwrap();
+    pub fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        let mut acl = match PosixACL::read_default_acl(path) {
+            Ok(acl) => acl,
+            Err(e) => {
+                bail!("Error reading default ACL. This should only be run against directories: {e}")
+            }
+        };
         for entry in acl.entries() {
             match entry.qual {
                 Qualifier::User(uid) => {
@@ -80,12 +85,13 @@ pub mod acl {
                 _ => (),
             }
         }
+        Ok(())
     }
 }
 
 pub mod files {
-    use crate::Ctx;
     use crate::acl;
+    use crate::Ctx;
     use file_owner::PathExt;
     use rayon::prelude::*;
     use std::fs;
@@ -189,7 +195,16 @@ pub mod files {
             };
 
             if ctx.modify_acls {
-                acl::update_acl(&ctx, &f.path())
+                match acl::update_access_acl(&ctx, &f.path()) {
+                    Ok(_) => (),
+                    Err(e) => eprintln!("{e}"),
+                };
+                if ft.is_dir() {
+                    match acl::update_default_acl(&ctx, &f.path()) {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("{e}"),
+                    };
+                }
             }
 
             if ft.is_dir() {

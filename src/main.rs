@@ -61,10 +61,6 @@ fn main() -> Result<()> {
         gidmap,
     };
 
-    if args.modify_acls {
-        acl::update_acl(&ctx, &args.path)
-    }
-
     // just verify before fucking things up
     println!("{ctx:?}");
     println!(
