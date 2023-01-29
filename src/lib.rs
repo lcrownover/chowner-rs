@@ -9,22 +9,75 @@ pub struct Ctx {
 
 pub mod acl {
     use crate::Ctx;
-    use std::path::Path;
     use posix_acl::{PosixACL, Qualifier};
+    use std::path::Path;
     pub fn update_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
         update_access_acl(&ctx, &path);
         update_default_acl(&ctx, &path);
     }
     fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
         let mut acl = PosixACL::read_acl(path).unwrap();
-        for e in acl.entries() {
-            println!("{:?}", e.qual)
+        for entry in acl.entries() {
+            match entry.qual {
+                Qualifier::User(uid) => {
+                    let new_uid = ctx.uidmap.get(&uid);
+                    match new_uid {
+                        Some(new_uid) => {
+                            // remove this entry
+                            acl.remove(Qualifier::User(uid));
+                            // then add the new entry
+                            acl.set(Qualifier::User(*new_uid), entry.perm)
+                        }
+                        None => (),
+                    }
+                }
+                Qualifier::Group(gid) => {
+                    let new_gid = ctx.gidmap.get(&gid);
+                    match new_gid {
+                        Some(new_gid) => {
+                            // remove this entry
+                            acl.remove(Qualifier::User(gid));
+                            // then add the new entry
+                            acl.set(Qualifier::User(*new_gid), entry.perm)
+                        }
+                        None => (),
+                    }
+                }
+                _ => (),
+            }
         }
     }
+
     fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
         let mut acl = PosixACL::read_default_acl(path).unwrap();
-        for e in acl.entries() {
-            println!("{:?}", e.qual)
+        for entry in acl.entries() {
+            match entry.qual {
+                Qualifier::User(uid) => {
+                    let new_uid = ctx.uidmap.get(&uid);
+                    match new_uid {
+                        Some(new_uid) => {
+                            // remove this entry
+                            acl.remove(Qualifier::User(uid));
+                            // then add the new entry
+                            acl.set(Qualifier::User(*new_uid), entry.perm)
+                        }
+                        None => (),
+                    }
+                }
+                Qualifier::Group(gid) => {
+                    let new_gid = ctx.gidmap.get(&gid);
+                    match new_gid {
+                        Some(new_gid) => {
+                            // remove this entry
+                            acl.remove(Qualifier::User(gid));
+                            // then add the new entry
+                            acl.set(Qualifier::User(*new_gid), entry.perm)
+                        }
+                        None => (),
+                    }
+                }
+                _ => (),
+            }
         }
     }
 }
