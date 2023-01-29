@@ -279,7 +279,7 @@ pub mod files {
         Ok(())
     }
 
-    fn process_path(ctx: &Ctx, p: &Path) -> Result<(), anyhow::Error> {
+    fn process_path(ctx: &Ctx, p: &Path, recurse: bool) -> Result<(), anyhow::Error> {
         println!("{} -> Started Processing", p.display());
 
         // Skip symlinks, they're nuthin but trouble
@@ -301,7 +301,7 @@ pub mod files {
         }
 
         // If the item is a dir, do it all again!
-        if p.is_dir() {
+        if p.is_dir() && recurse {
             run_dir(&ctx, &p)?;
         }
 
@@ -310,7 +310,7 @@ pub mod files {
 
     fn run_dir(ctx: &Ctx, path: &Path) -> Result<(), anyhow::Error> {
         // do the stuff to the provided Path
-        // process_path(&ctx, path)?;
+        process_path(&ctx, path, false)?;
 
         // then list all its children and do the stuff
         println!("{} -> Enumerating children", path.display());
@@ -318,7 +318,7 @@ pub mod files {
         let files = parse_file_listing(file_listing);
 
         files.par_iter().for_each(move |f| {
-            match process_path(&ctx, &f.path()) {
+            match process_path(&ctx, &f.path(), true) {
                 Ok(_) => (),
                 Err(e) => eprintln!("{e}"),
             };
