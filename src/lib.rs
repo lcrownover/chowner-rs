@@ -8,6 +8,7 @@ pub struct Ctx {
 }
 
 pub mod acl {
+    use crate::acl;
     use crate::Ctx;
     use posix_acl::{PosixACL, Qualifier};
     use std::path::Path;
@@ -84,6 +85,7 @@ pub mod acl {
 
 pub mod files {
     use crate::Ctx;
+    use crate::acl;
     use file_owner::PathExt;
     use rayon::prelude::*;
     use std::fs;
@@ -186,9 +188,8 @@ pub mod files {
                 None => (),
             };
 
-            // need to get acls too but i cant do that on mac
             if ctx.modify_acls {
-                println!("modifying acls")
+                acl::update_acl(&ctx, &f.path())
             }
 
             if ft.is_dir() {
