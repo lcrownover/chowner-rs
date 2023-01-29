@@ -61,19 +61,6 @@ fn main() -> Result<()> {
         gidmap,
     };
 
-    // just verify before fucking things up
-    println!("{ctx:?}");
-    println!(
-        "Running recursively against path '{}', continue? [y/n]",
-        args.path
-    );
-    let mut ans = String::new();
-    io::stdin().read_line(&mut ans).unwrap();
-    if ans.trim() != "y".to_string() {
-        println!("exiting");
-        exit(0)
-    }
-
     // here we go
     files::run_dir(&ctx, &args.path);
 

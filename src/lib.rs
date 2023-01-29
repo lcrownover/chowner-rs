@@ -26,14 +26,23 @@ pub mod acl {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
-                            println!("{} -> Uid {uid} found in ACL, replacing with uid {new_uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Uid {uid} found in ACL, replacing with uid {new_uid}",
+                                path.as_ref().display()
+                            );
                             if ctx.noop {
                                 println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("{} -> Removing Access ACL for old uid: {uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Removing Access ACL for old uid: {uid}",
+                                path.as_ref().display()
+                            );
                             acl.remove(Qualifier::User(uid));
-                            println!("{} -> Adding Access ACL for new uid: {new_uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Adding Access ACL for new uid: {new_uid}",
+                                path.as_ref().display()
+                            );
                             acl.set(Qualifier::User(*new_uid), entry.perm)
                         }
                         None => (),
@@ -43,14 +52,23 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
-                            println!("{} -> Gid {gid} found in ACL, replacing with gid {new_gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Gid {gid} found in ACL, replacing with gid {new_gid}",
+                                path.as_ref().display()
+                            );
                             if ctx.noop {
                                 println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("{} -> Removing Access ACL for old gid: {gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Removing Access ACL for old gid: {gid}",
+                                path.as_ref().display()
+                            );
                             acl.remove(Qualifier::Group(gid));
-                            println!("{} -> Adding Access ACL for new gid: {new_gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Adding Access ACL for new gid: {new_gid}",
+                                path.as_ref().display()
+                            );
                             acl.set(Qualifier::Group(*new_gid), entry.perm)
                         }
                         None => (),
@@ -61,7 +79,10 @@ pub mod acl {
         }
         println!("{} -> Writing changes to ACL", path.as_ref().display());
         match acl.write_acl(path) {
-            Ok(_) => println!("{} -> Successfully wrote changes to ACL", path.as_ref().display()),
+            Ok(_) => println!(
+                "{} -> Successfully wrote changes to ACL",
+                path.as_ref().display()
+            ),
             Err(e) => bail!("{} -> Failed to write acl: {e}", path.as_ref().display()),
         }
         Ok(())
@@ -82,14 +103,23 @@ pub mod acl {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
-                            println!("{} -> Uid {uid} found in ACL, replacing with uid {new_uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Uid {uid} found in ACL, replacing with uid {new_uid}",
+                                path.as_ref().display()
+                            );
                             if ctx.noop {
                                 println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("{} -> Removing Default ACL for old uid: {uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Removing Default ACL for old uid: {uid}",
+                                path.as_ref().display()
+                            );
                             acl.remove(Qualifier::User(uid));
-                            println!("{} -> Adding Default ACL for new uid: {new_uid}", path.as_ref().display());
+                            println!(
+                                "{} -> Adding Default ACL for new uid: {new_uid}",
+                                path.as_ref().display()
+                            );
                             acl.set(Qualifier::User(*new_uid), entry.perm)
                         }
                         None => (),
@@ -99,14 +129,23 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
-                            println!("{} -> Gid {gid} found in ACL, replacing with gid {new_gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Gid {gid} found in ACL, replacing with gid {new_gid}",
+                                path.as_ref().display()
+                            );
                             if ctx.noop {
                                 println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("{} -> Removing Default ACL for old gid: {gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Removing Default ACL for old gid: {gid}",
+                                path.as_ref().display()
+                            );
                             acl.remove(Qualifier::Group(gid));
-                            println!("{} -> Adding Default ACL for new gid: {new_gid}", path.as_ref().display());
+                            println!(
+                                "{} -> Adding Default ACL for new gid: {new_gid}",
+                                path.as_ref().display()
+                            );
                             acl.set(Qualifier::Group(*new_gid), entry.perm)
                         }
                         None => (),
@@ -115,10 +154,16 @@ pub mod acl {
                 _ => (),
             }
         }
-        println!("{} -> Writing changes to Default ACL", path.as_ref().display());
+        println!(
+            "{} -> Writing changes to Default ACL",
+            path.as_ref().display()
+        );
         if !ctx.noop {
             match acl.write_acl(path) {
-                Ok(_) => println!("{} -> Successfully wrote changes to Default ACL", path.as_ref().display()),
+                Ok(_) => println!(
+                    "{} -> Successfully wrote changes to Default ACL",
+                    path.as_ref().display()
+                ),
                 Err(e) => bail!("{} -> Failed to write acl: {e}", path.as_ref().display()),
             }
         } else {
@@ -158,7 +203,10 @@ pub mod files {
         let fm = match f.metadata() {
             Ok(fm) => fm,
             Err(e) => {
-                bail!("{} -> failed to parse file metadata: {e}", f.path().display());
+                bail!(
+                    "{} -> failed to parse file metadata: {e}",
+                    f.path().display()
+                );
             }
         };
         Ok(fm)
@@ -191,11 +239,9 @@ pub mod files {
                 if !ctx.noop {
                     match f.path().set_owner(*new_uid) {
                         Ok(_) => (),
-                        Err(e) => eprintln!(
-                            "{} -> Failed to set uid, error: {}",
-                            f.path().display(),
-                            e
-                        ),
+                        Err(e) => {
+                            eprintln!("{} -> Failed to set uid, error: {}", f.path().display(), e)
+                        }
                     };
                 }
             }
@@ -217,11 +263,9 @@ pub mod files {
                 if !ctx.noop {
                     match f.path().set_group(*new_gid) {
                         Ok(_) => (),
-                        Err(e) => eprintln!(
-                            "{} -> Failed to set gid, error: {}",
-                            f.path().display(),
-                            e
-                        ),
+                        Err(e) => {
+                            eprintln!("{} -> Failed to set gid, error: {}", f.path().display(), e)
+                        }
                     };
                 }
             }
@@ -267,12 +311,10 @@ pub mod files {
 
     pub fn run_dir(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
         // do the stuff to the provided Path
+        process_dir_entry(&ctx, path.as_ref());
 
         // then list all its children and do the stuff
-        println!(
-            "{} -> Enumerating children",
-            path.as_ref().display()
-        );
+        println!("{} -> Enumerating children", path.as_ref().display());
         let file_listing = get_file_listing(&path)?;
         let files = parse_file_listing(file_listing);
 
