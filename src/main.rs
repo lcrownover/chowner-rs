@@ -3,7 +3,6 @@ use clap::Parser;
 use posix_acl::{PosixACL, Qualifier};
 use std::io;
 use std::process::exit;
-use xattr;
 
 use chowner_rs::files;
 use chowner_rs::pairs;
@@ -63,21 +62,16 @@ fn main() -> Result<()> {
     };
 
     if args.modify_acls {
-        // let mut acl = PosixACL::read_acl(args.path).unwrap();
-
-        let mut xattrs = xattr::list(args.path).unwrap().peekable();
-
-        if xattrs.peek().is_none() {
-            println!("no xattr set on root");
+        let mut access_acl = PosixACL::read_acl(&args.path).unwrap();
+        let mut default_acl = PosixACL::read_acl(&args.path).unwrap();
+        println!("access:");
+        for e in access_acl.entries() {
+            println!("{e:?}")
         }
-
-        println!("Extended attributes:");
-        for attr in xattrs {
-            println!(" - {:?}", attr);
+        println!("default:");
+        for e in default_acl.entries() {
+            println!("{e:?}")
         }
-        // for e in acl.entries() {
-        //     println!("{e:?}")
-        // }
         exit(0)
     }
 
