@@ -1,11 +1,8 @@
 use anyhow::{bail, Result};
 use clap::Parser;
-use std::io;
-use std::process::exit;
 
-use chowner_rs::files;
-use chowner_rs::acl;
 use chowner_rs::pairs;
+use chowner_rs::files;
 use chowner_rs::Ctx;
 
 /// Blazingly fast filesystem modifier
@@ -62,7 +59,7 @@ fn main() -> Result<()> {
     };
 
     // here we go
-    files::start(&ctx, &args.path);
+    files::start(&ctx, &args.path)?;
 
     Ok(())
 }

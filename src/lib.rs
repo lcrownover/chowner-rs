@@ -81,7 +81,7 @@ pub mod acl {
             }
         }
         if !changed {
-            return Ok(())
+            return Ok(());
         }
         println!("{} -> Writing changes to ACL", path.as_ref().display());
         match acl.write_acl(path) {
@@ -164,7 +164,7 @@ pub mod acl {
             }
         }
         if !changed {
-            return Ok(())
+            return Ok(());
         }
         println!(
             "{} -> Writing changes to Default ACL",
