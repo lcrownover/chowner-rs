@@ -179,28 +179,24 @@ pub mod files {
     }
 
     fn change_uid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
+        println!("Scanning uids");
         let fm = get_file_metadata(f)?;
         let current_uid = fm.st_uid();
         match ctx.uidmap.get(&current_uid) {
             Some(new_uid) => {
                 println!(
-                    "PREVIEW: changing uid from {current_uid} to {new_uid} for file {}",
+                    "Found: Changing uid from {current_uid} to {new_uid} for file {}",
                     f.path().display()
                 );
-                if ctx.noop == false {
+                if !ctx.noop {
                     match f.path().set_owner(*new_uid) {
                         Ok(_) => (),
                         Err(e) => eprintln!(
-                            "failed to set uid for file {}, error: {}",
+                            "Failed to set uid for file {}, error: {}",
                             f.path().display(),
                             e
                         ),
                     };
-                    println!(
-                        "CHANGED: current uid {:?}, new uid {}",
-                        f.path().owner().unwrap().id(),
-                        new_uid
-                    );
                 }
             }
             None => (),
@@ -209,28 +205,24 @@ pub mod files {
     }
 
     fn change_gid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
+        println!("Scanning gids");
         let fm = get_file_metadata(f)?;
         let current_gid = fm.st_gid();
         match ctx.gidmap.get(&current_gid) {
             Some(new_gid) => {
                 println!(
-                    "PREVIEW: changing gid from {current_gid} to {new_gid} for file {}",
+                    "Found: Changing gid from {current_gid} to {new_gid} for file {}",
                     f.path().display()
                 );
-                if ctx.noop == false {
+                if !ctx.noop {
                     match f.path().set_group(*new_gid) {
                         Ok(_) => (),
                         Err(e) => eprintln!(
-                            "failed to set gid for file {}, error: {}",
+                            "Failed to set gid for file {}, error: {}",
                             f.path().display(),
                             e
                         ),
                     };
-                    println!(
-                        "CHANGED: current gid {:?}, new gid {}",
-                        f.path().group().unwrap().id(),
-                        new_gid
-                    );
                 }
             }
             None => (),
@@ -249,7 +241,8 @@ pub mod files {
 
         // Skip symlinks, they're nuthin but trouble
         if ft.is_symlink() {
-            return Ok(())
+            println!("Skipping symlink: {}", f.path().display());
+            return Ok(());
         }
 
         // Run the logic to check and swap old uid with new uid
@@ -276,7 +269,10 @@ pub mod files {
         // do the stuff to the provided Path
 
         // then list all its children and do the stuff
-        println!("Getting all files in directory: {}", path.as_ref().display());
+        println!(
+            "Getting all files in directory: {}",
+            path.as_ref().display()
+        );
         let file_listing = get_file_listing(&path)?;
         let files = parse_file_listing(file_listing);
 
