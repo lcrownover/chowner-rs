@@ -14,26 +14,26 @@ pub mod acl {
     use std::path::Path;
 
     pub fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
-        println!("Scanning Access ACLs on path: {:?}", path.as_ref());
+        println!("{} -> Scanning Access ACLs", path.as_ref().display());
         let mut acl = match PosixACL::read_acl(path) {
             Ok(acl) => acl,
-            Err(e) => bail!("Error reading ACL: {e}"),
+            Err(e) => bail!("{} -> Error reading ACL: {e}", path.as_ref().display()),
         };
         for entry in acl.entries() {
-            println!("Processing entry: {entry:?}");
+            // println!("Processing entry: {entry:?}");
             match entry.qual {
                 Qualifier::User(uid) => {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
-                            println!("Uid {uid} found in ACL, replacing with uid {new_uid}");
+                            println!("{} -> Uid {uid} found in ACL, replacing with uid {new_uid}", path.as_ref().display());
                             if ctx.noop {
-                                println!("noop, not making changes");
+                                println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("Removing Access ACL for old uid: {uid}");
+                            println!("{} -> Removing Access ACL for old uid: {uid}", path.as_ref().display());
                             acl.remove(Qualifier::User(uid));
-                            println!("Adding Access ACL for new uid: {new_uid}");
+                            println!("{} -> Adding Access ACL for new uid: {new_uid}", path.as_ref().display());
                             acl.set(Qualifier::User(*new_uid), entry.perm)
                         }
                         None => (),
@@ -43,14 +43,14 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
-                            println!("Gid {gid} found in ACL, replacing with gid {new_gid}");
+                            println!("{} -> Gid {gid} found in ACL, replacing with gid {new_gid}", path.as_ref().display());
                             if ctx.noop {
-                                println!("noop, not making changes");
+                                println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("Removing Access ACL for old gid: {gid}");
+                            println!("{} -> Removing Access ACL for old gid: {gid}", path.as_ref().display());
                             acl.remove(Qualifier::Group(gid));
-                            println!("Adding Access ACL for new gid: {new_gid}");
+                            println!("{} -> Adding Access ACL for new gid: {new_gid}", path.as_ref().display());
                             acl.set(Qualifier::Group(*new_gid), entry.perm)
                         }
                         None => (),
@@ -59,37 +59,37 @@ pub mod acl {
                 _ => (),
             }
         }
-        println!("Writing changes to ACL");
+        println!("{} -> Writing changes to ACL", path.as_ref().display());
         match acl.write_acl(path) {
-            Ok(_) => println!("Successfully wrote changes to ACL"),
-            Err(e) => bail!("Failed to write acl: {e}"),
+            Ok(_) => println!("{} -> Successfully wrote changes to ACL", path.as_ref().display()),
+            Err(e) => bail!("{} -> Failed to write acl: {e}", path.as_ref().display()),
         }
         Ok(())
     }
 
     pub fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
-        println!("Scanning Default ACLs on path: {:?}", path.as_ref());
+        println!("{} -> Scanning Default ACLs", path.as_ref().display());
         let mut acl = match PosixACL::read_default_acl(path) {
             Ok(acl) => acl,
             Err(e) => {
-                bail!("Error reading default ACL. This should only be run against directories: {e}")
+                bail!("{} -> Error reading default ACL. This should only be run against directories: {e}", path.as_ref().display())
             }
         };
         for entry in acl.entries() {
-            println!("Processing entry: {entry:?}");
+            // println!("Processing entry: {entry:?}");
             match entry.qual {
                 Qualifier::User(uid) => {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
-                            println!("Uid {uid} found in ACL, replacing with uid {new_uid}");
+                            println!("{} -> Uid {uid} found in ACL, replacing with uid {new_uid}", path.as_ref().display());
                             if ctx.noop {
-                                println!("noop, not making changes");
+                                println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("Removing Default ACL for old uid: {uid}");
+                            println!("{} -> Removing Default ACL for old uid: {uid}", path.as_ref().display());
                             acl.remove(Qualifier::User(uid));
-                            println!("Adding Default ACL for new uid: {new_uid}");
+                            println!("{} -> Adding Default ACL for new uid: {new_uid}", path.as_ref().display());
                             acl.set(Qualifier::User(*new_uid), entry.perm)
                         }
                         None => (),
@@ -99,14 +99,14 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
-                            println!("Gid {gid} found in ACL, replacing with gid {new_gid}");
+                            println!("{} -> Gid {gid} found in ACL, replacing with gid {new_gid}", path.as_ref().display());
                             if ctx.noop {
-                                println!("noop, not making changes");
+                                println!("{} -> noop, not making changes", path.as_ref().display());
                                 continue;
                             }
-                            println!("Removing Default ACL for old gid: {gid}");
+                            println!("{} -> Removing Default ACL for old gid: {gid}", path.as_ref().display());
                             acl.remove(Qualifier::Group(gid));
-                            println!("Adding Default ACL for new gid: {new_gid}");
+                            println!("{} -> Adding Default ACL for new gid: {new_gid}", path.as_ref().display());
                             acl.set(Qualifier::Group(*new_gid), entry.perm)
                         }
                         None => (),
@@ -115,14 +115,14 @@ pub mod acl {
                 _ => (),
             }
         }
-        println!("Writing changes to Default ACL");
+        println!("{} -> Writing changes to Default ACL", path.as_ref().display());
         if !ctx.noop {
             match acl.write_acl(path) {
-                Ok(_) => println!("Successfully wrote changes to Default ACL"),
-                Err(e) => bail!("Failed to write acl: {e}"),
+                Ok(_) => println!("{} -> Successfully wrote changes to Default ACL", path.as_ref().display()),
+                Err(e) => bail!("{} -> Failed to write acl: {e}", path.as_ref().display()),
             }
         } else {
-            println!("noop, not making changes");
+            println!("{} -> noop, not making changes", path.as_ref().display());
         }
         Ok(())
     }
@@ -158,7 +158,7 @@ pub mod files {
         let fm = match f.metadata() {
             Ok(fm) => fm,
             Err(e) => {
-                bail!("failed to parse file metadata: {e}");
+                bail!("{} -> failed to parse file metadata: {e}", f.path().display());
             }
         };
         Ok(fm)
@@ -169,7 +169,7 @@ pub mod files {
             Ok(f) => f,
             Err(e) => {
                 bail!(
-                    "failed to stat file: {}, error: {}",
+                    "{} -> failed to stat file, error: {}",
                     path.as_ref().display(),
                     e
                 );
@@ -179,20 +179,20 @@ pub mod files {
     }
 
     fn change_uid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("Scanning uids");
+        println!("{} -> Scanning uids", f.path().display());
         let fm = get_file_metadata(f)?;
         let current_uid = fm.st_uid();
         match ctx.uidmap.get(&current_uid) {
             Some(new_uid) => {
                 println!(
-                    "Found: Changing uid from {current_uid} to {new_uid} for file {}",
+                    "{} -> Found: Changing uid from {current_uid} to {new_uid}",
                     f.path().display()
                 );
                 if !ctx.noop {
                     match f.path().set_owner(*new_uid) {
                         Ok(_) => (),
                         Err(e) => eprintln!(
-                            "Failed to set uid for file {}, error: {}",
+                            "{} -> Failed to set uid, error: {}",
                             f.path().display(),
                             e
                         ),
@@ -205,20 +205,20 @@ pub mod files {
     }
 
     fn change_gid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("Scanning gids");
+        println!("{} -> Scanning gids", f.path().display());
         let fm = get_file_metadata(f)?;
         let current_gid = fm.st_gid();
         match ctx.gidmap.get(&current_gid) {
             Some(new_gid) => {
                 println!(
-                    "Found: Changing gid from {current_gid} to {new_gid} for file {}",
+                    "{} -> Found: Changing gid from {current_gid} to {new_gid}",
                     f.path().display()
                 );
                 if !ctx.noop {
                     match f.path().set_group(*new_gid) {
                         Ok(_) => (),
                         Err(e) => eprintln!(
-                            "Failed to set gid for file {}, error: {}",
+                            "{} -> Failed to set gid, error: {}",
                             f.path().display(),
                             e
                         ),
@@ -231,7 +231,7 @@ pub mod files {
     }
 
     fn process_dir_entry(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("Processing path: {}", f.path().display());
+        println!("{} -> Started Processing", f.path().display());
         let ft = match f.file_type() {
             Ok(ft) => ft,
             Err(e) => {
@@ -241,7 +241,7 @@ pub mod files {
 
         // Skip symlinks, they're nuthin but trouble
         if ft.is_symlink() {
-            println!("Skipping symlink: {}", f.path().display());
+            println!("{} -> Skipping symlink", f.path().display());
             return Ok(());
         }
 
@@ -270,7 +270,7 @@ pub mod files {
 
         // then list all its children and do the stuff
         println!(
-            "Getting all files in directory: {}",
+            "{} -> Enumerating children",
             path.as_ref().display()
         );
         let file_listing = get_file_listing(&path)?;
