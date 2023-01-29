@@ -48,6 +48,10 @@ pub mod acl {
                 _ => (),
             }
         }
+        match acl.write_acl(path) {
+            Ok(_) => (),
+            Err(e) => bail!("failed to write acl: {e}")
+        }
         Ok(())
     }
 
