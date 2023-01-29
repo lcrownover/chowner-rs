@@ -7,6 +7,28 @@ pub struct Ctx {
     pub gidmap: HashMap<u32, u32>,
 }
 
+pub mod acl {
+    use crate::Ctx;
+    use std::path::Path;
+    use posix_acl::{PosixACL, Qualifier};
+    pub fn update_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
+        update_access_acl(&ctx, &path);
+        update_default_acl(&ctx, &path);
+    }
+    fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
+        let mut acl = PosixACL::read_acl(path).unwrap();
+        for e in acl.entries() {
+            println!("{:?}", e.qual)
+        }
+    }
+    fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) {
+        let mut acl = PosixACL::read_default_acl(path).unwrap();
+        for e in acl.entries() {
+            println!("{:?}", e.qual)
+        }
+    }
+}
+
 pub mod files {
     use crate::Ctx;
     use file_owner::PathExt;

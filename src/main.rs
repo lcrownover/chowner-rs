@@ -1,10 +1,10 @@
 use anyhow::{bail, Result};
 use clap::Parser;
-use posix_acl::{PosixACL, Qualifier};
 use std::io;
 use std::process::exit;
 
 use chowner_rs::files;
+use chowner_rs::acl;
 use chowner_rs::pairs;
 use chowner_rs::Ctx;
 
@@ -62,17 +62,7 @@ fn main() -> Result<()> {
     };
 
     if args.modify_acls {
-        let mut access_acl = PosixACL::read_acl(&args.path).unwrap();
-        let mut default_acl = PosixACL::read_default_acl(&args.path).unwrap();
-        println!("access:");
-        for e in access_acl.entries() {
-            println!("{e:?}")
-        }
-        println!("default:");
-        for e in default_acl.entries() {
-            println!("{e:?}")
-        }
-        exit(0)
+        acl::update_acl(&ctx, &args.path)
     }
 
     // just verify before fucking things up
