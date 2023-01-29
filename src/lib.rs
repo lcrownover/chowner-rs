@@ -199,14 +199,11 @@ pub mod files {
         outfiles
     }
 
-    fn get_file_metadata(f: &DirEntry) -> Result<Metadata, anyhow::Error> {
-        let fm = match f.metadata() {
+    fn get_file_metadata(p: &Path) -> Result<Metadata, anyhow::Error> {
+        let fm = match p.metadata() {
             Ok(fm) => fm,
             Err(e) => {
-                bail!(
-                    "{} -> failed to parse file metadata: {e}",
-                    f.path().display()
-                );
+                bail!("{} -> failed to parse file metadata: {e}", p.display());
             }
         };
         Ok(fm)
@@ -226,21 +223,25 @@ pub mod files {
         Ok(file_listing)
     }
 
-    fn change_uid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("{} -> Scanning uids", f.path().display());
-        let fm = get_file_metadata(f)?;
+    fn change_uid(ctx: &Ctx, p: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        println!("{} -> Scanning uids", p.as_ref().display());
+        let fm = get_file_metadata(p.as_ref())?;
         let current_uid = fm.st_uid();
         match ctx.uidmap.get(&current_uid) {
             Some(new_uid) => {
                 println!(
                     "{} -> Found: Changing uid from {current_uid} to {new_uid}",
-                    f.path().display()
+                    p.as_ref().display()
                 );
                 if !ctx.noop {
-                    match f.path().set_owner(*new_uid) {
+                    match p.set_owner(*new_uid) {
                         Ok(_) => (),
                         Err(e) => {
-                            eprintln!("{} -> Failed to set uid, error: {}", f.path().display(), e)
+                            eprintln!(
+                                "{} -> Failed to set uid, error: {}",
+                                p.as_ref().display(),
+                                e
+                            )
                         }
                     };
                 }
@@ -250,21 +251,25 @@ pub mod files {
         Ok(())
     }
 
-    fn change_gid(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("{} -> Scanning gids", f.path().display());
-        let fm = get_file_metadata(f)?;
+    fn change_gid(ctx: &Ctx, p: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        println!("{} -> Scanning gids", p.as_ref().display());
+        let fm = get_file_metadata(p.as_ref())?;
         let current_gid = fm.st_gid();
         match ctx.gidmap.get(&current_gid) {
             Some(new_gid) => {
                 println!(
                     "{} -> Found: Changing gid from {current_gid} to {new_gid}",
-                    f.path().display()
+                    p.as_ref().display()
                 );
                 if !ctx.noop {
-                    match f.path().set_group(*new_gid) {
+                    match p.set_group(*new_gid) {
                         Ok(_) => (),
                         Err(e) => {
-                            eprintln!("{} -> Failed to set gid, error: {}", f.path().display(), e)
+                            eprintln!(
+                                "{} -> Failed to set gid, error: {}",
+                                p.as_ref().display(),
+                                e
+                            )
                         }
                     };
                 }
@@ -274,57 +279,56 @@ pub mod files {
         Ok(())
     }
 
-    fn process_dir_entry(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
-        println!("{} -> Started Processing", f.path().display());
-        let ft = match f.file_type() {
-            Ok(ft) => ft,
-            Err(e) => {
-                bail!("failed to parse file type: {e}");
-            }
-        };
+    fn process_path(ctx: &Ctx, p: &Path) -> Result<(), anyhow::Error> {
+        println!("{} -> Started Processing", p.display());
 
         // Skip symlinks, they're nuthin but trouble
-        if ft.is_symlink() {
-            println!("{} -> Skipping symlink", f.path().display());
+        if p.is_symlink() {
+            println!("{} -> Skipping symlink", p.display());
             return Ok(());
         }
 
         // Run the logic to check and swap old uid with new uid
-        change_uid(&ctx, &f)?;
-        change_gid(&ctx, &f)?;
+        change_uid(&ctx, &p)?;
+        change_gid(&ctx, &p)?;
 
         // Modify the posix ACLs if flag was provided
         if ctx.modify_acls {
-            acl::update_access_acl(&ctx, &f.path())?;
-            if ft.is_dir() {
-                acl::update_default_acl(&ctx, &f.path())?;
+            acl::update_access_acl(&ctx, &p)?;
+            if p.is_dir() {
+                acl::update_default_acl(&ctx, &p)?;
             }
         }
 
         // If the item is a dir, do it all again!
-        if ft.is_dir() {
-            run_dir(&ctx, &f.path())?;
+        if p.is_dir() {
+            run_dir(&ctx, &p)?;
         }
 
         Ok(())
     }
 
-    pub fn run_dir(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+    fn run_dir(ctx: &Ctx, path: &Path) -> Result<(), anyhow::Error> {
         // do the stuff to the provided Path
-        process_dir_entry(&ctx, path.as_ref());
+        process_path(&ctx, path)?;
 
         // then list all its children and do the stuff
-        println!("{} -> Enumerating children", path.as_ref().display());
+        println!("{} -> Enumerating children", path.display());
         let file_listing = get_file_listing(&path)?;
         let files = parse_file_listing(file_listing);
 
         files.par_iter().for_each(move |f| {
-            match process_dir_entry(&ctx, &f) {
+            match process_path(&ctx, &f.path()) {
                 Ok(_) => (),
                 Err(e) => eprintln!("{e}"),
             };
         });
 
+        Ok(())
+    }
+
+    pub fn start(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        run_dir(&ctx, path.as_ref())?;
         Ok(())
     }
 }

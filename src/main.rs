@@ -62,7 +62,7 @@ fn main() -> Result<()> {
     };
 
     // here we go
-    files::run_dir(&ctx, &args.path);
+    files::start(&ctx, &args.path);
 
     Ok(())
 }
