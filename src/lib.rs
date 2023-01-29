@@ -13,16 +13,19 @@ pub mod acl {
     use posix_acl::{PosixACL, Qualifier};
     use std::path::Path;
     pub fn update_access_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        println!("Scanning Access ACLs on path: {:?}", path.as_ref());
         let mut acl = match PosixACL::read_acl(path) {
             Ok(acl) => acl,
             Err(e) => bail!("Error reading ACL: {e}"),
         };
         for entry in acl.entries() {
+            println!("Processing entry: {entry:?}");
             match entry.qual {
                 Qualifier::User(uid) => {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
+                            println!("Uid {uid} found in ACL, replacing with uid {new_uid}");
                             println!("Removing Access ACL for old uid: {uid}");
                             acl.remove(Qualifier::User(uid));
                             println!("Adding Access ACL for new uid: {new_uid}");
@@ -35,6 +38,7 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
+                            println!("Gid {gid} found in ACL, replacing with gid {new_gid}");
                             println!("Removing Access ACL for old gid: {gid}");
                             acl.remove(Qualifier::Group(gid));
                             println!("Adding Access ACL for new gid: {new_gid}");
@@ -46,14 +50,16 @@ pub mod acl {
                 _ => (),
             }
         }
+        println!("Writing changes to ACL");
         match acl.write_acl(path) {
-            Ok(_) => (),
-            Err(e) => bail!("failed to write acl: {e}")
+            Ok(_) => println!("Successfully wrote changes to ACL"),
+            Err(e) => bail!("Failed to write acl: {e}"),
         }
         Ok(())
     }
 
     pub fn update_default_acl(ctx: &Ctx, path: &impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        println!("Scanning Default ACLs on path: {:?}", path.as_ref());
         let mut acl = match PosixACL::read_default_acl(path) {
             Ok(acl) => acl,
             Err(e) => {
@@ -61,11 +67,13 @@ pub mod acl {
             }
         };
         for entry in acl.entries() {
+            println!("Processing entry: {entry:?}");
             match entry.qual {
                 Qualifier::User(uid) => {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
+                            println!("Uid {uid} found in ACL, replacing with uid {new_uid}");
                             println!("Removing Default ACL for old uid: {uid}");
                             acl.remove(Qualifier::User(uid));
                             println!("Adding Default ACL for new uid: {new_uid}");
@@ -78,6 +86,7 @@ pub mod acl {
                     let new_gid = ctx.gidmap.get(&gid);
                     match new_gid {
                         Some(new_gid) => {
+                            println!("Gid {gid} found in ACL, replacing with gid {new_gid}");
                             println!("Removing Default ACL for old gid: {gid}");
                             acl.remove(Qualifier::Group(gid));
                             println!("Adding Default ACL for new gid: {new_gid}");
@@ -88,6 +97,11 @@ pub mod acl {
                 }
                 _ => (),
             }
+        }
+        println!("Writing changes to Default ACL");
+        match acl.write_acl(path) {
+            Ok(_) => println!("Successfully wrote changes to Default ACL"),
+            Err(e) => bail!("Failed to write acl: {e}"),
         }
         Ok(())
     }
