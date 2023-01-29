@@ -310,7 +310,7 @@ pub mod files {
 
     fn run_dir(ctx: &Ctx, path: &Path) -> Result<(), anyhow::Error> {
         // do the stuff to the provided Path
-        process_path(&ctx, path)?;
+        // process_path(&ctx, path)?;
 
         // then list all its children and do the stuff
         println!("{} -> Enumerating children", path.display());
