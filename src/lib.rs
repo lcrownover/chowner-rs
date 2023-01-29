@@ -28,7 +28,7 @@ pub mod acl {
                     match new_uid {
                         Some(new_uid) => {
                             println!(
-                                "{} -> Uid {uid} found in ACL, replacing with uid {new_uid}",
+                                "{} -> Uid {uid} found in Access ACL, replacing with uid {new_uid}",
                                 path.as_ref().display()
                             );
                             if ctx.noop {
@@ -55,7 +55,7 @@ pub mod acl {
                     match new_gid {
                         Some(new_gid) => {
                             println!(
-                                "{} -> Gid {gid} found in ACL, replacing with gid {new_gid}",
+                                "{} -> Gid {gid} found in Access ACL, replacing with gid {new_gid}",
                                 path.as_ref().display()
                             );
                             if ctx.noop {
@@ -111,7 +111,7 @@ pub mod acl {
                     match new_uid {
                         Some(new_uid) => {
                             println!(
-                                "{} -> Uid {uid} found in ACL, replacing with uid {new_uid}",
+                                "{} -> Uid {uid} found in Default ACL, replacing with uid {new_uid}",
                                 path.as_ref().display()
                             );
                             if ctx.noop {
@@ -138,7 +138,7 @@ pub mod acl {
                     match new_gid {
                         Some(new_gid) => {
                             println!(
-                                "{} -> Gid {gid} found in ACL, replacing with gid {new_gid}",
+                                "{} -> Gid {gid} found in Default ACL, replacing with gid {new_gid}",
                                 path.as_ref().display()
                             );
                             if ctx.noop {
