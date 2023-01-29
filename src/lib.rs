@@ -171,7 +171,7 @@ pub mod acl {
             path.as_ref().display()
         );
         if !ctx.noop {
-            match acl.write_acl(path) {
+            match acl.write_default_acl(path) {
                 Ok(_) => println!(
                     "{} -> Successfully wrote changes to Default ACL",
                     path.as_ref().display()
