@@ -239,6 +239,7 @@ pub mod files {
     }
 
     fn process_dir_entry(ctx: &Ctx, f: &DirEntry) -> Result<(), anyhow::Error> {
+        println!("Processing path: {}", f.path().display());
         let ft = match f.file_type() {
             Ok(ft) => ft,
             Err(e) => {
@@ -275,6 +276,7 @@ pub mod files {
         // do the stuff to the provided Path
 
         // then list all its children and do the stuff
+        println!("Getting all files in directory: {}", path.as_ref().display());
         let file_listing = get_file_listing(&path)?;
         let files = parse_file_listing(file_listing);
 
