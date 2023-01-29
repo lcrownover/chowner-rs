@@ -23,9 +23,9 @@ pub mod acl {
                     let new_uid = ctx.uidmap.get(&uid);
                     match new_uid {
                         Some(new_uid) => {
-                            // remove this entry
+                            println!("Removing ACL for old uid: {uid}");
                             acl.remove(Qualifier::User(uid));
-                            // then add the new entry
+                            println!("Adding ACL for new uid: {new_uid}");
                             acl.set(Qualifier::User(*new_uid), entry.perm)
                         }
                         None => (),
@@ -36,9 +36,11 @@ pub mod acl {
                     match new_gid {
                         Some(new_gid) => {
                             // remove this entry
-                            acl.remove(Qualifier::User(gid));
+                            println!("Removing ACL for old gid: {gid}");
+                            acl.remove(Qualifier::Group(gid));
                             // then add the new entry
-                            acl.set(Qualifier::User(*new_gid), entry.perm)
+                            println!("Adding ACL for new gid: {new_gid}");
+                            acl.set(Qualifier::Group(*new_gid), entry.perm)
                         }
                         None => (),
                     }
