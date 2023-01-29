@@ -19,6 +19,7 @@ pub mod acl {
             Ok(acl) => acl,
             Err(e) => bail!("{} -> Error reading ACL: {e}", path.as_ref().display()),
         };
+        let mut changed = false;
         for entry in acl.entries() {
             // println!("Processing entry: {entry:?}");
             match entry.qual {
@@ -43,7 +44,8 @@ pub mod acl {
                                 "{} -> Adding Access ACL for new uid: {new_uid}",
                                 path.as_ref().display()
                             );
-                            acl.set(Qualifier::User(*new_uid), entry.perm)
+                            acl.set(Qualifier::User(*new_uid), entry.perm);
+                            changed = true;
                         }
                         None => (),
                     }
@@ -69,13 +71,17 @@ pub mod acl {
                                 "{} -> Adding Access ACL for new gid: {new_gid}",
                                 path.as_ref().display()
                             );
-                            acl.set(Qualifier::Group(*new_gid), entry.perm)
+                            acl.set(Qualifier::Group(*new_gid), entry.perm);
+                            changed = true;
                         }
                         None => (),
                     }
                 }
                 _ => (),
             }
+        }
+        if !changed {
+            return Ok(())
         }
         println!("{} -> Writing changes to ACL", path.as_ref().display());
         match acl.write_acl(path) {
@@ -96,6 +102,7 @@ pub mod acl {
                 bail!("{} -> Error reading default ACL. This should only be run against directories: {e}", path.as_ref().display())
             }
         };
+        let mut changed = false;
         for entry in acl.entries() {
             // println!("Processing entry: {entry:?}");
             match entry.qual {
@@ -120,7 +127,8 @@ pub mod acl {
                                 "{} -> Adding Default ACL for new uid: {new_uid}",
                                 path.as_ref().display()
                             );
-                            acl.set(Qualifier::User(*new_uid), entry.perm)
+                            acl.set(Qualifier::User(*new_uid), entry.perm);
+                            changed = true;
                         }
                         None => (),
                     }
@@ -146,13 +154,17 @@ pub mod acl {
                                 "{} -> Adding Default ACL for new gid: {new_gid}",
                                 path.as_ref().display()
                             );
-                            acl.set(Qualifier::Group(*new_gid), entry.perm)
+                            acl.set(Qualifier::Group(*new_gid), entry.perm);
+                            changed = true;
                         }
                         None => (),
                     }
                 }
                 _ => (),
             }
+        }
+        if !changed {
+            return Ok(())
         }
         println!(
             "{} -> Writing changes to Default ACL",
@@ -309,11 +321,10 @@ pub mod files {
     }
 
     fn run_dir(ctx: &Ctx, path: &Path) -> Result<(), anyhow::Error> {
-        // do the stuff to the provided Path
+        // do the stuff to the provided Path with no recurse
         process_path(&ctx, path, false)?;
 
         // then list all its children and do the stuff
-        println!("{} -> Enumerating children", path.display());
         let file_listing = get_file_listing(&path)?;
         let files = parse_file_listing(file_listing);
 
