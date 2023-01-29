@@ -85,10 +85,7 @@ pub mod acl {
         }
         println!("{} -> Writing changes to ACL", path.display());
         match acl.write_acl(path) {
-            Ok(_) => println!(
-                "{} -> Successfully wrote changes to ACL",
-                path.display()
-            ),
+            Ok(_) => println!("{} -> Successfully wrote changes to ACL", path.display()),
             Err(e) => bail!("{} -> Failed to write acl: {e}", path.display()),
         }
         Ok(())
@@ -104,7 +101,6 @@ pub mod acl {
         };
         let mut changed = false;
         for entry in acl.entries() {
-            // println!("Processing entry: {entry:?}");
             match entry.qual {
                 Qualifier::User(uid) => {
                     let new_uid = ctx.uidmap.get(&uid);
@@ -166,10 +162,7 @@ pub mod acl {
         if !changed {
             return Ok(());
         }
-        println!(
-            "{} -> Writing changes to Default ACL",
-            path.display()
-        );
+        println!("{} -> Writing changes to Default ACL", path.display());
         if !ctx.noop {
             match acl.write_default_acl(path) {
                 Ok(_) => println!(
@@ -225,11 +218,7 @@ pub mod files {
         let file_listing = match fs::read_dir(path) {
             Ok(f) => f,
             Err(e) => {
-                bail!(
-                    "{} -> failed to stat file, error: {}",
-                    path.display(),
-                    e
-                );
+                bail!("{} -> failed to stat file, error: {}", path.display(), e);
             }
         };
         Ok(file_listing)
@@ -249,11 +238,7 @@ pub mod files {
                     match p.set_owner(*new_uid) {
                         Ok(_) => (),
                         Err(e) => {
-                            eprintln!(
-                                "{} -> Failed to set uid, error: {}",
-                                p.display(),
-                                e
-                            )
+                            eprintln!("{} -> Failed to set uid, error: {}", p.display(), e)
                         }
                     };
                 } else {
@@ -279,11 +264,7 @@ pub mod files {
                     match p.set_group(*new_gid) {
                         Ok(_) => (),
                         Err(e) => {
-                            eprintln!(
-                                "{} -> Failed to set gid, error: {}",
-                                p.display(),
-                                e
-                            )
+                            eprintln!("{} -> Failed to set gid, error: {}", p.display(), e)
                         }
                     };
                 }
@@ -294,8 +275,6 @@ pub mod files {
     }
 
     fn process_path(ctx: &Ctx, p: &Path, recurse: bool) -> Result<(), anyhow::Error> {
-        println!("{} -> Started Processing", p.display());
-
         // Skip symlinks, they're nuthin but trouble
         if p.is_symlink() {
             println!("{} -> Skipping symlink", p.display());
@@ -303,10 +282,15 @@ pub mod files {
         }
 
         // Run the logic to check and swap old uid with new uid
-        change_uid(&ctx, &p)?;
-        change_gid(&ctx, &p)?;
+        if !ctx.uidmap.is_empty() {
+            change_uid(&ctx, &p)?;
+        }
+        if !ctx.gidmap.is_empty() {
+            change_gid(&ctx, &p)?;
+        }
 
         // Modify the posix ACLs if flag was provided
+        // TODO(lcrown): see about refactoring these and skipping if the maps are empty
         if ctx.modify_acls {
             acl::update_access_acl(&ctx, &p)?;
             if p.is_dir() {
