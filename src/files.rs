@@ -1,29 +1,15 @@
 use crate::acl;
 use crate::ctx::Ctx;
+use crate::run;
+use crate::types::PermissionType;
 use anyhow::{bail, Result};
-use core::fmt;
 use file_owner::PathExt;
-use rayon::prelude::*;
 use std::fs;
 use std::fs::Metadata;
 use std::fs::ReadDir;
 // use std::os::linux::fs::MetadataExt;
 use std::os::macos::fs::MetadataExt;
 use std::path::{Path, PathBuf};
-
-pub enum PermissionType {
-    User,
-    Group,
-}
-
-impl fmt::Display for PermissionType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PermissionType::User => write!(f, "User"),
-            PermissionType::Group => write!(f, "Group"),
-        }
-    }
-}
 
 pub struct PermissionOperation {
     ptype: PermissionType,
@@ -56,7 +42,7 @@ pub fn parse_file_listing(file_listing: ReadDir) -> Vec<PathBuf> {
     outfiles
 }
 
-fn get_file_paths(path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
+pub fn get_file_paths(path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
     let fl = get_file_listing(path)?;
     let files = parse_file_listing(fl);
     Ok(files)
@@ -72,7 +58,7 @@ fn get_file_metadata(p: &Path) -> Result<Metadata, anyhow::Error> {
     Ok(fm)
 }
 
-fn update_file_permissions(ctx: &Ctx, po: &PermissionOperation) {
+fn set_file_permission(ctx: &Ctx, po: &PermissionOperation) {
     let vp = &ctx.verbose_printer;
     vp.print1(format!(
         "{} -> Found: Changing {} id from {} to {}",
@@ -81,15 +67,27 @@ fn update_file_permissions(ctx: &Ctx, po: &PermissionOperation) {
         po.current_id,
         po.new_id,
     ));
-    if !ctx.noop {
-        match po.path.set_owner(po.new_id) {
-            Ok(_) => (),
-            Err(e) => {
-                eprintln!("{} -> Failed to set uid, error: {}", po.path.display(), e)
-            }
-        };
-    } else {
+    if ctx.noop {
         vp.print1(format!("{} -> NOOP, not making changes", po.path.display()));
+        return;
+    }
+    match &po.ptype {
+        PermissionType::User => {
+            match po.path.set_owner(po.new_id) {
+                Ok(_) => (),
+                Err(e) => {
+                    eprintln!("{} -> Failed to set uid, error: {}", po.path.display(), e)
+                }
+            };
+        }
+        PermissionType::Group => {
+            match po.path.set_group(po.new_id) {
+                Ok(_) => (),
+                Err(e) => {
+                    eprintln!("{} -> Failed to set gid, error: {}", po.path.display(), e)
+                }
+            };
+        }
     }
 }
 
@@ -129,7 +127,7 @@ fn process_group_permission_operation(
     });
 }
 
-fn process_file_permissions(ctx: &Ctx, path: &Path) {
+fn update_file_permissions(ctx: &Ctx, path: &Path) {
     let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Processing file permissions", path.display()));
     let fm = match get_file_metadata(path.as_ref()) {
@@ -156,11 +154,11 @@ fn process_file_permissions(ctx: &Ctx, path: &Path) {
     }
 
     for po in ops {
-        update_file_permissions(&ctx, &po);
+        set_file_permission(&ctx, &po);
     }
 }
 
-fn process_path(ctx: &Ctx, path: &Path, recurse: bool) -> Result<(), anyhow::Error> {
+pub fn process_path(ctx: &Ctx, path: &Path, recurse: bool) -> Result<(), anyhow::Error> {
     let vp = &ctx.verbose_printer;
     // Skip symlinks, they're nuthin but trouble
     if path.is_symlink() {
@@ -168,56 +166,17 @@ fn process_path(ctx: &Ctx, path: &Path, recurse: bool) -> Result<(), anyhow::Err
         return Ok(());
     }
 
-    process_file_permissions(&ctx, path);
+    update_file_permissions(&ctx, path);
 
     // Modify the posix ACLs if flag was provided
-    // TODO(lcrown): see about refactoring these and skipping if the maps are empty
     if ctx.modify_acls {
-        acl::update_access_acl(&ctx, &path);
-        if path.is_dir() {
-            acl::update_default_acl(&ctx, &path);
-        }
+        acl::update_acl(&ctx, &path);
     }
 
     // If the item is a dir, do it all again!
     if path.is_dir() && recurse {
-        run_dir(&ctx, &path);
+        run::run_dir(&ctx, &path);
     }
 
     Ok(())
-}
-
-fn run_dir(ctx: &Ctx, path: &Path) {
-    // handle errors in here because we want to gracefully continue
-    // everything downstream should bail!() and bubble up here
-    // if anything fails, we just error print, return a unit, and keep going
-
-    // do the stuff to the provided Path with no recurse
-    match process_path(&ctx, path, false) {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("{e}");
-            return;
-        }
-    };
-
-    // then list all its children and do the stuff
-    let files = match get_file_paths(path) {
-        Ok(files) => files,
-        Err(e) => {
-            eprintln!("{e}");
-            return;
-        }
-    };
-
-    files.par_iter().for_each(move |f| {
-        match process_path(&ctx, &f.as_path(), true) {
-            Ok(_) => (),
-            Err(e) => eprintln!("{e}"),
-        };
-    });
-}
-
-pub fn start(ctx: &Ctx, path: &impl AsRef<Path>) {
-    run_dir(&ctx, path.as_ref());
 }

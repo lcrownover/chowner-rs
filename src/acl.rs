@@ -1,81 +1,77 @@
 use crate::ctx::Ctx;
+use crate::types::{AclType, PermissionType};
 
-use posix_acl::{PosixACL, Qualifier};
+use posix_acl::{ACLEntry, PosixACL, Qualifier};
 use std::path::Path;
 
-pub fn update_access_acl(ctx: &Ctx, path: &Path) {
-    let vp = &ctx.verbose_printer;
-    vp.print1(format!("{} -> Scanning Access ACLs", path.display()));
-    let mut acl = match PosixACL::read_acl(path) {
-        Ok(acl) => acl,
+fn get_acl(atype: AclType, path: &Path) -> Option<PosixACL> {
+    let acl = match atype {
+        AclType::Access => PosixACL::read_acl(path),
+        AclType::Default => PosixACL::read_default_acl(path),
+    };
+    match acl {
+        Ok(acl) => return Some(acl),
         Err(e) => {
             eprintln!("{} -> Error reading ACL: {e}", path.display());
-            return;
+            return None;
         }
     };
-    let mut changed = false;
-    for entry in acl.entries() {
-        match entry.qual {
-            Qualifier::User(uid) => {
-                let new_uid = ctx.uidmap.get(&uid);
-                match new_uid {
-                    Some(new_uid) => {
-                        vp.print1(format!(
-                            "{} -> Uid {uid} found in Access ACL, replacing with uid {new_uid}",
-                            path.display()
-                        ));
-                        if ctx.noop {
-                            vp.print1(format!("{} -> noop, not making changes", path.display()));
-                            return;
-                        }
-                        vp.print1(format!(
-                            "{} -> Adding Access ACL for new uid: {new_uid}",
-                            path.display()
-                        ));
-                        vp.print1(format!(
-                            "{} -> Removing Access ACL for old uid: {uid}",
-                            path.display()
-                        ));
-                        acl.remove(Qualifier::User(uid));
-                        acl.set(Qualifier::User(*new_uid), entry.perm);
-                        changed = true;
-                    }
-                    None => (),
-                }
+}
+
+fn set_acl_permission(
+    ctx: &Ctx,
+    path: &Path,
+    acl: &mut PosixACL,
+    id: u32,
+    entry: ACLEntry,
+    ptype: PermissionType,
+) -> bool {
+    let vp = &ctx.verbose_printer;
+    let new_id = match ptype {
+        PermissionType::User => ctx.uidmap.get(&id),
+        PermissionType::Group => ctx.gidmap.get(&id),
+    };
+    match new_id {
+        Some(new_id) => {
+            vp.print1(format!(
+                "{} -> {} id {} found in Access ACL, replacing with uid {}",
+                path.display(),
+                ptype,
+                id,
+                new_id,
+            ));
+            if ctx.noop {
+                vp.print1(format!("{} -> noop, not making changes", path.display()));
+                return false;
             }
-            Qualifier::Group(gid) => {
-                let new_gid = ctx.gidmap.get(&gid);
-                match new_gid {
-                    Some(new_gid) => {
-                        vp.print1(format!(
-                            "{} -> Gid {gid} found in Access ACL, replacing with gid {new_gid}",
-                            path.display()
-                        ));
-                        if ctx.noop {
-                            vp.print1(format!("{} -> noop, not making changes", path.display()));
-                            return;
-                        }
-                        vp.print1(format!(
-                            "{} -> Removing Access ACL for old gid: {gid}",
-                            path.display()
-                        ));
-                        acl.remove(Qualifier::Group(gid));
-                        vp.print1(format!(
-                            "{} -> Adding Access ACL for new gid: {new_gid}",
-                            path.display()
-                        ));
-                        acl.set(Qualifier::Group(*new_gid), entry.perm);
-                        changed = true;
-                    }
-                    None => (),
-                }
+            vp.print1(format!(
+                "{} -> Adding Access ACL for new {} id: {}",
+                path.display(),
+                ptype,
+                new_id,
+            ));
+            match ptype {
+                PermissionType::User => acl.set(Qualifier::User(*new_id), entry.perm),
+                PermissionType::Group => acl.set(Qualifier::Group(*new_id), entry.perm),
             }
-            _ => (),
+            vp.print1(format!(
+                "{} -> Removing Access ACL for old {} id: {}",
+                path.display(),
+                ptype,
+                id,
+            ));
+            match ptype {
+                PermissionType::User => acl.remove(Qualifier::User(id)),
+                PermissionType::Group => acl.remove(Qualifier::Group(id)),
+            };
+            return true;
         }
+        None => return false,
     }
-    if !changed {
-        return;
-    }
+}
+
+fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL) {
+    let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Writing changes to ACL", path.display()));
     match acl.write_acl(path) {
         Ok(_) => vp.print1(format!(
@@ -86,98 +82,106 @@ pub fn update_access_acl(ctx: &Ctx, path: &Path) {
     }
 }
 
-pub fn update_default_acl(ctx: &Ctx, path: &Path) {
+pub fn update_acl(ctx: &Ctx, path: &Path) {
     let vp = &ctx.verbose_printer;
-    vp.print1(format!("{} -> Scanning Default ACLs", path.display()));
-    let mut acl = match PosixACL::read_default_acl(path) {
-        Ok(acl) => acl,
-        Err(e) => {
-            eprintln!(
-                "{} -> Error reading default ACL. This should only be run against directories: {e}",
-                path.display()
-            );
-            return;
-        }
+    vp.print1(format!("{} -> Scanning Access ACLs", path.display()));
+
+    // get the acl, if it's none, it already printed an error, lets just skip the file
+    let mut access_acl = match get_acl(AclType::Access, path) {
+        Some(acl) => acl,
+        None => return,
     };
-    let mut changed = false;
-    for entry in acl.entries() {
+
+    // flag that only writes access acl if any changes were made
+    let mut access_changed = false;
+
+    // go through each entry and:
+    //  - if the current uid matches one of the current uids in our map
+    //      - add the new uid with the same permission
+    //      - remove the old uid
+    //  - if the current gid matches one of the current gids in our map
+    //      - add the new gid with the same permission
+    //      - remove the old gid
+    for entry in access_acl.entries() {
         match entry.qual {
             Qualifier::User(uid) => {
-                let new_uid = ctx.uidmap.get(&uid);
-                match new_uid {
-                    Some(new_uid) => {
-                        vp.print1(format!(
-                            "{} -> Uid {uid} found in Default ACL, replacing with uid {new_uid}",
-                            path.display()
-                        ));
-                        if ctx.noop {
-                            vp.print1(format!("{} -> noop, not making changes", path.display()));
-                            continue;
-                        }
-                        vp.print1(format!(
-                            "{} -> Removing Default ACL for old uid: {uid}",
-                            path.display()
-                        ));
-                        acl.remove(Qualifier::User(uid));
-                        vp.print1(format!(
-                            "{} -> Adding Default ACL for new uid: {new_uid}",
-                            path.display()
-                        ));
-                        acl.set(Qualifier::User(*new_uid), entry.perm);
-                        changed = true;
-                    }
-                    None => (),
+                if set_acl_permission(
+                    &ctx,
+                    path,
+                    &mut access_acl,
+                    uid,
+                    entry,
+                    PermissionType::User,
+                ) {
+                    access_changed = true
                 }
             }
             Qualifier::Group(gid) => {
-                let new_gid = ctx.gidmap.get(&gid);
-                match new_gid {
-                    Some(new_gid) => {
-                        vp.print1(format!(
-                            "{} -> Gid {gid} found in Default ACL, replacing with gid {new_gid}",
-                            path.display()
-                        ));
-                        if ctx.noop {
-                            vp.print1(format!("{} -> noop, not making changes", path.display()));
-                            continue;
-                        }
-                        vp.print1(format!(
-                            "{} -> Removing Default ACL for old gid: {gid}",
-                            path.display()
-                        ));
-                        acl.remove(Qualifier::Group(gid));
-                        vp.print1(format!(
-                            "{} -> Adding Default ACL for new gid: {new_gid}",
-                            path.display()
-                        ));
-                        acl.set(Qualifier::Group(*new_gid), entry.perm);
-                        changed = true;
-                    }
-                    None => (),
+                if set_acl_permission(
+                    &ctx,
+                    path,
+                    &mut access_acl,
+                    gid,
+                    entry,
+                    PermissionType::Group,
+                ) {
+                    access_changed = true
                 }
             }
             _ => (),
         }
     }
-    if !changed {
+
+    // write changes to the access acl
+    if access_changed {
+        write_acl(&ctx, path, &mut access_acl);
+    }
+
+    // if it's not a directory, we don't need to update the default acl
+    if !path.is_dir() {
         return;
     }
-    vp.print1(format!(
-        "{} -> Writing changes to Default ACL",
-        path.display()
-    ));
-    if !ctx.noop {
-        match acl.write_default_acl(path) {
-            Ok(_) => vp.print1(format!(
-                "{} -> Successfully wrote changes to Default ACL",
-                path.display()
-            )),
-            Err(e) => {
-                eprintln!("{} -> Failed to write acl: {e}", path.display());
-                return;
+
+    // flag that only writes access acl if any changes were made
+    let mut default_changed = false;
+
+    let mut default_acl = match get_acl(AclType::Default, path) {
+        Some(acl) => acl,
+        None => return,
+    };
+    // run the write against AclType::Default
+    for entry in default_acl.entries() {
+        match entry.qual {
+            Qualifier::User(uid) => {
+                if set_acl_permission(
+                    &ctx,
+                    path,
+                    &mut default_acl,
+                    uid,
+                    entry,
+                    PermissionType::User,
+                ) {
+                    default_changed = true
+                }
             }
+            Qualifier::Group(gid) => {
+                if set_acl_permission(
+                    &ctx,
+                    path,
+                    &mut default_acl,
+                    gid,
+                    entry,
+                    PermissionType::Group,
+                ) {
+                    default_changed = true
+                }
+            }
+            _ => (),
         }
-    } else {
-        vp.print1(format!("{} -> noop, not making changes", path.display()));
+    }
+
+    // otherwise we should write the changes
+    if default_changed {
+        write_acl(&ctx, path, &mut default_acl);
     }
 }

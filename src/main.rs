@@ -7,6 +7,8 @@ mod files;
 mod pairs;
 mod acl;
 mod util;
+mod types;
+mod run;
 
 /// Blazingly fast filesystem modifier
 #[derive(Parser)]
@@ -67,7 +69,7 @@ fn main() -> Result<()> {
     };
 
     // here we go
-    files::start(&ctx, &args.path);
+    run::start(&ctx, &args.path);
 
     Ok(())
 }
