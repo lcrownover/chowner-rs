@@ -1,10 +1,12 @@
 use anyhow::{bail, Result};
 use clap::Parser;
+use util::VerbosePrinter;
 
 mod ctx;
 mod files;
 mod pairs;
 mod acl;
+mod util;
 
 /// Blazingly fast filesystem modifier
 #[derive(Parser)]
@@ -32,6 +34,10 @@ struct Cli {
     /// dry run, don't change anything
     #[arg(short, long)]
     noop: bool,
+
+    /// verbose, print operations
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 fn main() -> Result<()> {
@@ -57,10 +63,11 @@ fn main() -> Result<()> {
         modify_acls: args.modify_acls,
         uidmap,
         gidmap,
+        verbose_printer: VerbosePrinter::new(args.verbose),
     };
 
     // here we go
-    files::start(&ctx, &args.path)?;
+    files::start(&ctx, &args.path);
 
     Ok(())
 }
