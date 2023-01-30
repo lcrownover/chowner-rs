@@ -1,9 +1,10 @@
 use anyhow::{bail, Result};
 use clap::Parser;
 
-use chowner_rs::pairs;
-use chowner_rs::files;
-use chowner_rs::Ctx;
+mod ctx;
+mod files;
+mod pairs;
+mod acl;
 
 /// Blazingly fast filesystem modifier
 #[derive(Parser)]
@@ -51,7 +52,7 @@ fn main() -> Result<()> {
         Err(e) => bail!(e),
     };
 
-    let ctx = Ctx {
+    let ctx = ctx::Ctx {
         noop: args.noop,
         modify_acls: args.modify_acls,
         uidmap,
