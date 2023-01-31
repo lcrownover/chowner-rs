@@ -4,6 +4,14 @@ use crate::types::{AclType, PermissionType};
 use posix_acl::{ACLEntry, PosixACL, Qualifier};
 use std::path::Path;
 
+/// Returns the User or Group `PosixACL` at the given path
+///
+/// # Arguments
+///
+/// * `atype` - Type of ACL you expect, either User or Group
+///
+/// * `path` - Path to the filesystem object
+///
 fn get_acl(atype: AclType, path: &Path) -> Option<PosixACL> {
     let acl = match atype {
         AclType::Access => PosixACL::read_acl(path),
@@ -18,18 +26,37 @@ fn get_acl(atype: AclType, path: &Path) -> Option<PosixACL> {
     };
 }
 
+// TODO(lcrown): This is a mess, why do we need entry? ugh. fix it.
+//
+/// Do the work to set the ACL according to all the provided data.
+/// Returns true if any changes were made, otherwise false.
+///
+/// # Arguments
+///
+/// * `ctx` - Context object used throughout the application
+///
+/// * `path` - Path to the filesystem object
+///
+/// * `acl` - Mutable reference to the `PosixACL` that we want to change
+///
+/// * `current_id` - ID of the current object, either UID or GID
+///
+/// * `entry` - The ACL entry itself, for getting the permission for resetting it
+///
+/// * `ptype` - The permission type that you want changed, User or Group
+///
 fn set_acl_permission(
     ctx: &Ctx,
     path: &Path,
     acl: &mut PosixACL,
-    id: u32,
+    current_id: u32,
     entry: ACLEntry,
     ptype: PermissionType,
 ) -> bool {
     let vp = &ctx.verbose_printer;
     let new_id = match ptype {
-        PermissionType::User => ctx.uidmap.get(&id),
-        PermissionType::Group => ctx.gidmap.get(&id),
+        PermissionType::User => ctx.uidmap.get(&current_id),
+        PermissionType::Group => ctx.gidmap.get(&current_id),
     };
     match new_id {
         Some(new_id) => {
@@ -37,7 +64,7 @@ fn set_acl_permission(
                 "{} -> {} id {} found in Access ACL, replacing with uid {}",
                 path.display(),
                 ptype,
-                id,
+                current_id,
                 new_id,
             ));
             if ctx.noop {
@@ -58,11 +85,11 @@ fn set_acl_permission(
                 "{} -> Removing Access ACL for old {} id: {}",
                 path.display(),
                 ptype,
-                id,
+                current_id,
             ));
             match ptype {
-                PermissionType::User => acl.remove(Qualifier::User(id)),
-                PermissionType::Group => acl.remove(Qualifier::Group(id)),
+                PermissionType::User => acl.remove(Qualifier::User(current_id)),
+                PermissionType::Group => acl.remove(Qualifier::Group(current_id)),
             };
             return true;
         }
@@ -70,6 +97,16 @@ fn set_acl_permission(
     }
 }
 
+/// Write the ACL data, essentially "saving" it
+///
+/// # Arguments
+///
+/// * `ctx` - Context object used throughout the application
+///
+/// * `path` - Path to the filesystem object
+///
+/// * `acl` - Mutable reference to the `PosixACL` you want to save
+///
 fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL) {
     let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Writing changes to ACL", path.display()));
@@ -82,6 +119,14 @@ fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL) {
     }
 }
 
+/// Using the data in our context, update the ACLs on the given `path`
+///
+/// # Arguments
+///
+/// * `ctx` - Context object used throughout the application
+///
+/// * `path` - Path to the filesystem object
+///
 pub fn update_acl(ctx: &Ctx, path: &Path) {
     let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Scanning Access ACLs", path.display()));
@@ -104,24 +149,24 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
     //      - remove the old gid
     for entry in access_acl.entries() {
         match entry.qual {
-            Qualifier::User(uid) => {
+            Qualifier::User(current_uid) => {
                 if set_acl_permission(
                     &ctx,
                     path,
                     &mut access_acl,
-                    uid,
+                    current_uid,
                     entry,
                     PermissionType::User,
                 ) {
                     access_changed = true
                 }
             }
-            Qualifier::Group(gid) => {
+            Qualifier::Group(current_gid) => {
                 if set_acl_permission(
                     &ctx,
                     path,
                     &mut access_acl,
-                    gid,
+                    current_gid,
                     entry,
                     PermissionType::Group,
                 ) {
@@ -152,24 +197,24 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
     // run the write against AclType::Default
     for entry in default_acl.entries() {
         match entry.qual {
-            Qualifier::User(uid) => {
+            Qualifier::User(current_uid) => {
                 if set_acl_permission(
                     &ctx,
                     path,
                     &mut default_acl,
-                    uid,
+                    current_uid,
                     entry,
                     PermissionType::User,
                 ) {
                     default_changed = true
                 }
             }
-            Qualifier::Group(gid) => {
+            Qualifier::Group(current_gid) => {
                 if set_acl_permission(
                     &ctx,
                     path,
                     &mut default_acl,
-                    gid,
+                    current_gid,
                     entry,
                     PermissionType::Group,
                 ) {

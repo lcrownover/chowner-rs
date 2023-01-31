@@ -1,5 +1,6 @@
 use core::fmt;
 
+/// What type of permission we're expecting
 pub enum PermissionType {
     User,
     Group,
@@ -14,7 +15,10 @@ impl fmt::Display for PermissionType {
     }
 }
 
+/// Two types of Posix ACLs
 pub enum AclType {
+    /// Access ACL is the normal acl type on files and directories
     Access,
+    /// Default ACLs are only present on directories, and govern ACL inheritance
     Default,
 }
