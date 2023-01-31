@@ -1,3 +1,5 @@
+/// Use `print1`, `print2`, and `print3` for different levels of verbosity
+///
 #[derive(Debug)]
 pub struct VerbosePrinter {
     verbosity_level: u8,
