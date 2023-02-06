@@ -49,11 +49,16 @@ fn set_acl_permission(
     ctx: &Ctx,
     path: &Path,
     acl: &mut PosixACL,
+    acl_type: AclType,
     current_id: u32,
     entry: ACLEntry,
     ptype: PermissionType,
 ) -> bool {
     let vp = &ctx.verbose_printer;
+    let atype_str = match acl_type {
+        AclType::Access => "access",
+        AclType::Default => "default",
+    };
     let new_id = match ptype {
         PermissionType::User => ctx.uidmap.get(&current_id),
         PermissionType::Group => ctx.gidmap.get(&current_id),
@@ -61,19 +66,21 @@ fn set_acl_permission(
     match new_id {
         Some(new_id) => {
             vp.print1(format!(
-                "{} -> {} id {} found in Access ACL, replacing with uid {}",
+                "{} -> {} id {} found in {} ACL, replacing with uid {}",
                 path.display(),
                 ptype,
                 current_id,
+                atype_str,
                 new_id,
             ));
             if ctx.noop {
-                vp.print1(format!("{} -> noop, not making changes", path.display()));
+                vp.print1(format!("{} -> NOOP: Not making changes", path.display()));
                 return false;
             }
             vp.print1(format!(
-                "{} -> Adding Access ACL for new {} id: {}",
+                "{} -> Adding {} ACL for new {} id: {}",
                 path.display(),
+                atype_str,
                 ptype,
                 new_id,
             ));
@@ -82,8 +89,9 @@ fn set_acl_permission(
                 PermissionType::Group => acl.set(Qualifier::Group(*new_id), entry.perm),
             }
             vp.print1(format!(
-                "{} -> Removing Access ACL for old {} id: {}",
+                "{} -> Removing {} ACL for old {} id: {}",
                 path.display(),
+                atype_str,
                 ptype,
                 current_id,
             ));
@@ -107,10 +115,14 @@ fn set_acl_permission(
 ///
 /// * `acl` - Mutable reference to the `PosixACL` you want to save
 ///
-fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL) {
+fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL, acl_type: AclType) {
     let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Writing changes to ACL", path.display()));
-    match acl.write_acl(path) {
+    let res = match acl_type {
+        AclType::Access => acl.write_acl(path),
+        AclType::Default => acl.write_default_acl(path),
+    };
+    match res {
         Ok(_) => vp.print1(format!(
             "{} -> Successfully wrote changes to ACL",
             path.display()
@@ -129,7 +141,7 @@ fn write_acl(ctx: &Ctx, path: &Path, acl: &mut PosixACL) {
 ///
 pub fn update_acl(ctx: &Ctx, path: &Path) {
     let vp = &ctx.verbose_printer;
-    vp.print1(format!("{} -> Scanning Access ACLs", path.display()));
+    vp.print1(format!("{} -> Scanning ACLs", path.display()));
 
     // get the acl, if it's none, it already printed an error, lets just skip the file
     let mut access_acl = match get_acl(AclType::Access, path) {
@@ -154,6 +166,7 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
                     &ctx,
                     path,
                     &mut access_acl,
+                    AclType::Access,
                     current_uid,
                     entry,
                     PermissionType::User,
@@ -166,6 +179,7 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
                     &ctx,
                     path,
                     &mut access_acl,
+                    AclType::Access,
                     current_gid,
                     entry,
                     PermissionType::Group,
@@ -179,7 +193,7 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
 
     // write changes to the access acl
     if access_changed {
-        write_acl(&ctx, path, &mut access_acl);
+        write_acl(&ctx, path, &mut access_acl, AclType::Access);
     }
 
     // if it's not a directory, we don't need to update the default acl
@@ -202,6 +216,7 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
                     &ctx,
                     path,
                     &mut default_acl,
+                    AclType::Default,
                     current_uid,
                     entry,
                     PermissionType::User,
@@ -214,6 +229,7 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
                     &ctx,
                     path,
                     &mut default_acl,
+                    AclType::Default,
                     current_gid,
                     entry,
                     PermissionType::Group,
@@ -227,6 +243,6 @@ pub fn update_acl(ctx: &Ctx, path: &Path) {
 
     // otherwise we should write the changes
     if default_changed {
-        write_acl(&ctx, path, &mut default_acl);
+        write_acl(&ctx, path, &mut default_acl, AclType::Default);
     }
 }

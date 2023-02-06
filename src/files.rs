@@ -6,8 +6,8 @@ use file_owner::PathExt;
 use std::fs;
 use std::fs::Metadata;
 use std::fs::ReadDir;
-// use std::os::linux::fs::MetadataExt;
-use std::os::macos::fs::MetadataExt;
+use std::os::linux::fs::MetadataExt;
+// use std::os::macos::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 /// This represents a single File Permission change operation
@@ -109,7 +109,7 @@ fn set_file_permission(ctx: &Ctx, perm_op: &PermissionOperation) {
     ));
     if ctx.noop {
         vp.print1(format!(
-            "{} -> NOOP, not making changes",
+            "{} -> NOOP: Not making changes",
             perm_op.path.display()
         ));
         return;
@@ -203,7 +203,6 @@ fn update_file_permissions(ctx: &Ctx, path: &Path) {
     };
 
     let mut ops: Vec<PermissionOperation> = vec![];
-    // do uid stuff
     if !ctx.uidmap.is_empty() {
         match get_permission_operation(&ctx, &fm, path, PermissionType::User) {
             Some(po) => ops.push(po),
@@ -238,10 +237,12 @@ pub fn process_path(ctx: &Ctx, path: &Path) {
     }
 
     // Update unix permissions
-    update_file_permissions(&ctx, path);
+    if !ctx.skip_permissions {
+        update_file_permissions(&ctx, path);
+    }
 
     // Modify the posix ACLs if flag was provided
-    if ctx.modify_acls {
+    if !ctx.skip_acls {
         acl::update_acl(&ctx, &path);
     }
 }

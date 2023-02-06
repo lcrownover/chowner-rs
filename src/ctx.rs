@@ -7,8 +7,10 @@ use crate::util::VerbosePrinter;
 pub struct Ctx {
     /// If noop, nothing will be written, only processed
     pub noop: bool,
-    /// If modify_acls, Posix ACLs will be modified alongside Unix permissions
-    pub modify_acls: bool,
+    /// If skip_permissions, Posix permissions will not be modified
+    pub skip_permissions: bool,
+    /// If skip_acls, Posix ACLs will be not be modified
+    pub skip_acls: bool,
     /// Map of old:new uids. Example 57:219883
     pub uidmap: HashMap<u32, u32>,
     /// Map of old:new gids. Example 57:219883

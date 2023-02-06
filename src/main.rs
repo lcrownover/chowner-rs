@@ -29,9 +29,13 @@ struct Cli {
     #[arg(short, long)]
     gidpair: Vec<String>,
 
-    /// modify unix acls
+    /// don't modify unix permissions
     #[arg(short, long, default_value_t = false)]
-    modify_acls: bool,
+    skip_permissions: bool,
+
+    /// don't modify unix acls
+    #[arg(short, long, default_value_t = false)]
+    skip_acls: bool,
 
     /// dry run, don't change anything
     #[arg(short, long)]
@@ -62,7 +66,8 @@ fn main() -> Result<()> {
 
     let ctx = ctx::Ctx {
         noop: args.noop,
-        modify_acls: args.modify_acls,
+        skip_permissions: args.skip_permissions,
+        skip_acls: args.skip_acls,
         uidmap,
         gidmap,
         verbose_printer: VerbosePrinter::new(args.verbose),
