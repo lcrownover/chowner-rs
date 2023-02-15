@@ -22,11 +22,11 @@ struct Cli {
     threads: usize,
 
     /// uid mapping (old:new)
-    #[arg(short, long)]
+    #[clap(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
     uidpair: Vec<String>,
 
     /// gid mapping (old:new)
-    #[arg(short, long)]
+    #[clap(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
     gidpair: Vec<String>,
 
     /// don't modify unix permissions
