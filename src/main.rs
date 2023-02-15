@@ -23,11 +23,11 @@ struct Cli {
 
     /// uid mapping (old:new)
     #[clap(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
-    uidpair: Vec<String>,
+    uidpairs: Vec<String>,
 
     /// gid mapping (old:new)
     #[clap(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
-    gidpair: Vec<String>,
+    gidpairs: Vec<String>,
 
     /// don't modify unix permissions
     #[arg(short, long, default_value_t = false)]
@@ -54,12 +54,12 @@ fn main() -> Result<()> {
             .build_global()?;
     }
 
-    let uidmap = match pairs::get_map_from_pairs(args.uidpair) {
+    let uidmap = match pairs::get_map_from_pairs(args.uidpairs) {
         Ok(m) => m,
         Err(e) => bail!(e),
     };
 
-    let gidmap = match pairs::get_map_from_pairs(args.gidpair) {
+    let gidmap = match pairs::get_map_from_pairs(args.gidpairs) {
         Ok(m) => m,
         Err(e) => bail!(e),
     };
