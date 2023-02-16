@@ -230,11 +230,6 @@ fn update_file_permissions(ctx: &Ctx, path: &Path) {
 ///
 pub fn process_path(ctx: &Ctx, path: &Path) {
     let vp = &ctx.verbose_printer;
-    // Skip symlinks, they're nuthin but trouble
-    if path.is_symlink() {
-        vp.print1(format!("{} -> Skipping symlink", path.display()));
-        return;
-    }
 
     // Update unix permissions
     if !ctx.skip_permissions {
