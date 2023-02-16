@@ -19,7 +19,8 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
     // do the stuff to the provided Path with no recurse
     files::process_path(&ctx, path);
 
-    if !path.is_dir() {
+    // We only want to recurse through non-symlink dirs
+    if path.is_symlink() || !path.is_dir() {
         return;
     }
 
