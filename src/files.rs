@@ -229,8 +229,6 @@ fn update_file_permissions(ctx: &Ctx, path: &Path) {
 /// update the ACLs.
 ///
 pub fn process_path(ctx: &Ctx, path: &Path) {
-    let vp = &ctx.verbose_printer;
-
     // Update unix permissions
     if !ctx.skip_permissions {
         update_file_permissions(&ctx, path);
