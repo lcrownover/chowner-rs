@@ -81,12 +81,25 @@ pub fn get_children_paths(path: &Path) -> Result<Vec<PathBuf>, anyhow::Error> {
 /// * `path` - Path to the object
 ///
 fn get_file_metadata(path: &Path) -> Result<Metadata, anyhow::Error> {
-    let fm = match path.metadata() {
-        Ok(fm) => fm,
-        Err(e) => {
-            bail!("{} -> Failed to parse file metadata: {e}", path.display());
+    let fm: Metadata;
+    match path.is_symlink() {
+        true => {
+            let fm = match fs::symlink_metadata(path) {
+                Ok(fm) => fm,
+                Err(e) => {
+                    bail!("{} -> Failed to parse file metadata: {e}", path.display());
+                }
+            };
         }
-    };
+        false => {
+            let fm = match path.metadata() {
+                Ok(fm) => fm,
+                Err(e) => {
+                    bail!("{} -> Failed to parse file metadata: {e}", path.display());
+                }
+            };
+        }
+    }
     Ok(fm)
 }
 

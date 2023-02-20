@@ -13,6 +13,9 @@ use std::path::Path;
 /// * `path` - Path to the filesystem object
 ///
 fn get_acl(atype: AclType, path: &Path) -> Option<PosixACL> {
+    if path.is_symlink() {
+        return None;
+    }
     let acl = match atype {
         AclType::Access => PosixACL::read_acl(path),
         AclType::Default => PosixACL::read_default_acl(path),
