@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.68"
 clap = { version = "4.1.4", features = ["derive", "cargo"] }
 file-owner = "0.1.1"
+nix = { version = "0.26.2", features = ["fs"] }
 posix-acl = "1.1.0"
 rayon = "1.6.1"
 xattr = "1.0.0"

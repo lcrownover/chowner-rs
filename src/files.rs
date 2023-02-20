@@ -3,6 +3,8 @@ use crate::ctx::Ctx;
 use crate::types::PermissionType;
 use anyhow::{bail, Result};
 use file_owner::PathExt;
+use nix::unistd::FchownatFlags;
+use nix::unistd::{fchownat, Gid, Uid};
 use std::fs;
 use std::fs::Metadata;
 use std::fs::ReadDir;
@@ -128,30 +130,63 @@ fn set_file_permission(ctx: &Ctx, perm_op: &PermissionOperation) {
         return;
     }
     match &perm_op.ptype {
-        PermissionType::User => {
-            match perm_op.path.set_owner(perm_op.new_id) {
-                Ok(_) => (),
-                Err(e) => {
-                    eprintln!(
-                        "{} -> Failed to set uid, error: {}",
-                        perm_op.path.display(),
-                        e
-                    )
-                }
-            };
-        }
-        PermissionType::Group => {
-            match perm_op.path.set_group(perm_op.new_id) {
-                Ok(_) => (),
-                Err(e) => {
-                    eprintln!(
-                        "{} -> Failed to set gid, error: {}",
-                        perm_op.path.display(),
-                        e
-                    )
-                }
-            };
-        }
+        PermissionType::User => match perm_op.path.is_symlink() {
+            true => set_user_file_permission_on_symlink(ctx, perm_op),
+            false => set_user_file_permission_on_file(ctx, perm_op),
+        },
+        PermissionType::Group => match perm_op.path.is_symlink() {
+            true => set_group_file_permission_on_symlink(ctx, perm_op),
+            false => set_group_file_permission_on_file(ctx, perm_op),
+        },
+    }
+}
+
+fn set_user_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
+    if let Err(e) = perm_op.path.set_owner(perm_op.new_id) {
+        eprintln!(
+            "{} -> Failed to set uid, error: {}",
+            perm_op.path.display(),
+            e
+        )
+    }
+}
+fn set_group_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
+    if let Err(e) = perm_op.path.set_group(perm_op.new_id) {
+        eprintln!(
+            "{} -> Failed to set gid, error: {}",
+            perm_op.path.display(),
+            e
+        )
+    }
+}
+fn set_user_file_permission_on_symlink(ctx: &Ctx, perm_op: &PermissionOperation) {
+    if let Err(e) = fchownat(
+        None,
+        &perm_op.path,
+        Some(Uid::from(perm_op.new_id)),
+        None,
+        FchownatFlags::NoFollowSymlink,
+    ) {
+        eprintln!(
+            "{} -> Failed to set uid, error: {}",
+            perm_op.path.display(),
+            e
+        )
+    }
+}
+fn set_group_file_permission_on_symlink(ctx: &Ctx, perm_op: &PermissionOperation) {
+    if let Err(e) = fchownat(
+        None,
+        &perm_op.path,
+        None,
+        Some(Gid::from(perm_op.new_id)),
+        FchownatFlags::NoFollowSymlink,
+    ) {
+        eprintln!(
+            "{} -> Failed to set gid, error: {}",
+            perm_op.path.display(),
+            e
+        )
     }
 }
 
