@@ -131,17 +131,17 @@ fn set_file_permission(ctx: &Ctx, perm_op: &PermissionOperation) {
     }
     match &perm_op.ptype {
         PermissionType::User => match perm_op.path.is_symlink() {
-            true => set_user_file_permission_on_symlink(ctx, perm_op),
-            false => set_user_file_permission_on_file(ctx, perm_op),
+            true => set_user_file_permission_on_symlink(perm_op),
+            false => set_user_file_permission_on_file(perm_op),
         },
         PermissionType::Group => match perm_op.path.is_symlink() {
-            true => set_group_file_permission_on_symlink(ctx, perm_op),
-            false => set_group_file_permission_on_file(ctx, perm_op),
+            true => set_group_file_permission_on_symlink(perm_op),
+            false => set_group_file_permission_on_file(perm_op),
         },
     }
 }
 
-fn set_user_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
+fn set_user_file_permission_on_file(perm_op: &PermissionOperation) {
     if let Err(e) = perm_op.path.set_owner(perm_op.new_id) {
         eprintln!(
             "{} -> Failed to set uid, error: {}",
@@ -150,7 +150,7 @@ fn set_user_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
         )
     }
 }
-fn set_group_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
+fn set_group_file_permission_on_file(perm_op: &PermissionOperation) {
     if let Err(e) = perm_op.path.set_group(perm_op.new_id) {
         eprintln!(
             "{} -> Failed to set gid, error: {}",
@@ -159,7 +159,7 @@ fn set_group_file_permission_on_file(ctx: &Ctx, perm_op: &PermissionOperation) {
         )
     }
 }
-fn set_user_file_permission_on_symlink(ctx: &Ctx, perm_op: &PermissionOperation) {
+fn set_user_file_permission_on_symlink(perm_op: &PermissionOperation) {
     if let Err(e) = fchownat(
         None,
         &perm_op.path,
@@ -174,7 +174,7 @@ fn set_user_file_permission_on_symlink(ctx: &Ctx, perm_op: &PermissionOperation)
         )
     }
 }
-fn set_group_file_permission_on_symlink(ctx: &Ctx, perm_op: &PermissionOperation) {
+fn set_group_file_permission_on_symlink(perm_op: &PermissionOperation) {
     if let Err(e) = fchownat(
         None,
         &perm_op.path,
