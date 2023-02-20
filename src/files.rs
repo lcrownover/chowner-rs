@@ -84,7 +84,7 @@ fn get_file_metadata(path: &Path) -> Result<Metadata, anyhow::Error> {
     let fm: Metadata;
     match path.is_symlink() {
         true => {
-            let fm = match fs::symlink_metadata(path) {
+            fm = match fs::symlink_metadata(path) {
                 Ok(fm) => fm,
                 Err(e) => {
                     bail!("{} -> Failed to parse file metadata: {e}", path.display());
@@ -92,7 +92,7 @@ fn get_file_metadata(path: &Path) -> Result<Metadata, anyhow::Error> {
             };
         }
         false => {
-            let fm = match path.metadata() {
+            fm = match path.metadata() {
                 Ok(fm) => fm,
                 Err(e) => {
                     bail!("{} -> Failed to parse file metadata: {e}", path.display());
