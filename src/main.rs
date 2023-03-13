@@ -30,15 +30,15 @@ struct Cli {
     gidpairs: Vec<String>,
 
     /// don't modify unix permissions
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     skip_permissions: bool,
 
     /// don't modify unix acls
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     skip_acls: bool,
 
     /// dry run, don't change anything
-    #[arg(short, long)]
+    #[arg(long)]
     noop: bool,
 
     /// verbose, print operations
