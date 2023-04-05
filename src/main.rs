@@ -54,6 +54,10 @@ fn main() -> Result<()> {
             .build_global()?;
     }
 
+    if let Err(e) = pairs::check_pairs(&args.uidpairs, &args.gidpairs) {
+        bail!(e)
+    }
+
     let uidmap = match pairs::get_map_from_pairs(args.uidpairs) {
         Ok(m) => m,
         Err(e) => bail!(e),

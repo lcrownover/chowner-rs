@@ -56,12 +56,112 @@ pub fn get_map_from_pairs(pairs: Vec<String>) -> Result<HashMap<u32, u32>, anyho
         match Idpair::from_string(&pair) {
             Ok(u) => match idmap.insert(u.current_id, u.new_id) {
                 Some(_) => {
+                    // insert returns the value at that key if it already exists.
+                    // we can discard the value and return an error since we dont want dupes.
                     bail!("Duplicate old id found in provided idpairs. Check your input data.")
                 }
+                // value inserted, nothing returned and we're good to go.
                 None => (),
             },
-            Err(e) => bail!(e),
+            Err(e) => bail!(e), // things like invalid pairs, etc
         }
     }
     Ok(idmap)
+}
+
+/// Returns an error if pairs don't pass checks
+///
+/// # Arguments
+///
+/// * `uidpairs` - UID pairs for user migration
+/// * `gidpairs` - GID pairs for group migration
+///
+pub fn check_pairs(uidpairs: &Vec<String>, gidpairs: &Vec<String>) -> Result<(), anyhow::Error> {
+    check_pair_duplicates(uidpairs, gidpairs)?;
+
+    Ok(())
+}
+
+/// Returns an error if the flattened list of source/dest in all pairs contains duplicates
+///
+/// # Arguments
+///
+/// * `uidpairs` - UID pairs for user migration
+/// * `gidpairs` - GID pairs for group migration
+///
+pub fn check_pair_duplicates(
+    uidpairs: &Vec<String>,
+    gidpairs: &Vec<String>,
+) -> Result<(), anyhow::Error> {
+    let allids = flatten_pairs(uidpairs, gidpairs);
+
+    let dupes_len = allids.clone().len();
+
+    let mut dedups = allids.clone();
+    dedups.sort();
+    dedups.dedup();
+    let dedup_len = dedups.len();
+
+    if dupes_len != dedup_len {
+        bail!("Duplicate ID found in source or destination pair.")
+    }
+    Ok(())
+}
+
+/// Returns a list of Strings of the flattened uidpairs and gidpairs into a single list of all IDs.
+///
+/// # Arguments
+///
+/// * `uidpairs` - UID pairs for user migration
+/// * `gidpairs` - GID pairs for group migration
+///
+fn flatten_pairs(uidpairs: &Vec<String>, gidpairs: &Vec<String>) -> Vec<String> {
+    // uidpairs: ["1:2", "3:4"], gidpairs: ["5:6", "7:8"]
+    let allpairs = [uidpairs.clone(), gidpairs.clone()].concat();
+    // allpairs: ["1:2", "3:4", "5:6", "7:8"]
+    let mut allids: Vec<String> = vec![];
+    for pair in allpairs {
+        for i in pair.split(":") {
+            allids.push(i.to_string());
+        }
+    }
+    // allids: ["1", "2", "3", "4", "5", "6", "7", "8"]
+    allids
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_pair_duplicates_flattens_correctly() {
+        let control = vec![
+            "1".to_string(),
+            "2".to_string(),
+            "3".to_string(),
+            "4".to_string(),
+            "5".to_string(),
+            "6".to_string(),
+            "7".to_string(),
+            "8".to_string(),
+        ];
+        let uidpairs = vec!["1:2".to_string(), "3:4".to_string()];
+        let gidpairs = vec!["5:6".to_string(), "7:8".to_string()];
+        let flattened = flatten_pairs(&uidpairs, &gidpairs);
+        assert_eq!(flattened, control)
+    }
+
+    #[test]
+    fn check_pair_duplicates_finds_dupes_one_side() {
+        let uidpairs = vec!["1:2".to_string(), "3:4".to_string()];
+        let gidpairs = vec!["5:6".to_string(), "7:7".to_string()];
+        assert!(check_pair_duplicates(&uidpairs, &gidpairs).is_err())
+    }
+
+    #[test]
+    fn check_pair_duplicates_finds_dupes_both_sides() {
+        let uidpairs = vec!["1:2".to_string(), "3:4".to_string()];
+        let gidpairs = vec!["5:6".to_string(), "7:4".to_string()];
+        assert!(check_pair_duplicates(&uidpairs, &gidpairs).is_err())
+    }
 }
