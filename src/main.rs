@@ -2,20 +2,20 @@ use anyhow::{bail, Result};
 use clap::Parser;
 use util::VerbosePrinter;
 
+mod acl;
 mod ctx;
 mod files;
 mod pairs;
-mod acl;
-mod util;
-mod types;
 mod run;
+mod types;
+mod util;
 
 /// Blazingly fast filesystem modifier
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, arg_required_else_help(true))]
 struct Cli {
-    /// Base path for enumeration
-    path: String,
+    /// Base paths for enumeration
+    paths: Vec<String>,
 
     /// Number of threads to spawn
     #[arg(short, long, default_value_t = 0)]
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
     };
 
     // here we go
-    run::start(&ctx, &args.path);
+    run::start(&ctx, &args.paths);
 
     Ok(())
 }

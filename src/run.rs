@@ -16,6 +16,19 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
     // everything downstream should bail!() and bubble up here
     // if anything fails, we just error print, return a unit, and keep going
 
+    // first check if we should exclude this path
+    let exclude_paths = vec![".snapshots"];
+    match path.to_str() {
+        None => return,
+        Some(name) => {
+            for ep in exclude_paths {
+                if name.ends_with(ep) {
+                    return;
+                }
+            }
+        }
+    }
+
     // do the stuff to the provided Path with no recurse
     files::process_path(&ctx, path);
 
@@ -47,6 +60,11 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
 ///
 /// * `path` - Path to the filesystem object
 ///
-pub fn start(ctx: &Ctx, path: &impl AsRef<Path>) {
-    run_recurse(&ctx, path.as_ref());
+pub fn start<P>(ctx: &Ctx, paths: &[P])
+where
+    P: AsRef<Path>,
+{
+    for p in paths {
+        run_recurse(&ctx, p.as_ref());
+    }
 }
