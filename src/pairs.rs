@@ -95,7 +95,7 @@ pub fn check_pair_duplicates(
 ) -> Result<(), anyhow::Error> {
     let allids = flatten_pairs(uidpairs, gidpairs);
 
-    let dupes_len = allids.clone().len();
+    let dupes_len = allids.len();
 
     let mut dedups = allids.clone();
     dedups.sort();

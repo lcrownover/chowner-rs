@@ -9,7 +9,6 @@ use std::fs;
 use std::fs::Metadata;
 use std::fs::ReadDir;
 use std::os::linux::fs::MetadataExt;
-// use std::os::macos::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 /// This represents a single File Permission change operation

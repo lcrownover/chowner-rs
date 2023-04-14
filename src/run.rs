@@ -49,6 +49,7 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
     files.par_iter().for_each(move |f| {
         run_recurse(&ctx, &f.as_path());
     });
+
 }
 
 /// Primary entrypoint for starting the application after parsing command-line args
