@@ -1,13 +1,13 @@
-# FROM ubuntu:latest
-# RUN apt-get update && apt-get install -y libacl1-dev rust-all
+FROM lukemathwalker/cargo-chef:latest-rust-slim-bullseye AS chef
+WORKDIR app
 
-FROM rust:latest as builder
-WORKDIR /app
-COPY Cargo.toml Cargo.lock ./
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --recipe-path recipe.json
+# COPY . .
 RUN apt-get update && apt-get install -y libacl1-dev
-RUN cargo fetch
-
-
-# FROM debian:buster-slim
-# COPY --from=builder /usr/local/cargo/bin/chowner-rs /usr/local/bin/chowner-rs
-# CMD ["chowner-rs"]
+RUN cargo build

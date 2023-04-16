@@ -14,7 +14,7 @@ mod util;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true))]
 struct Cli {
-    /// Base paths for enumeration
+    /// Base path(s) for enumeration
     paths: Vec<String>,
 
     /// Number of threads to spawn
