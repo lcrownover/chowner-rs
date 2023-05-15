@@ -221,7 +221,7 @@ fn get_permission_operation(
         },
     };
     return Some(PermissionOperation {
-        ptype: PermissionType::User,
+        ptype,
         current_id,
         new_id,
         path: path.to_path_buf(),
