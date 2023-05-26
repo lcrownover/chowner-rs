@@ -23,7 +23,7 @@ impl Idpair {
     /// // }
     /// ```
     ///
-    pub fn from_string(idpair: &str) -> Result<Idpair, anyhow::Error> {
+    pub fn from_string(idpair: &str) -> Result<Option<Idpair>, anyhow::Error> {
         let current_id = match idpair.split(':').nth(0) {
             Some(s) => match s.parse::<u32>() {
                 Ok(o) => o,
@@ -38,8 +38,11 @@ impl Idpair {
             },
             None => bail!("Invalid idpair. expected format (old:new) '890:211790'"),
         };
-        // let new = idpair.split(":").nth(1)?.parse::<u32>()?;
-        Ok(Idpair { current_id, new_id })
+        if current_id == new_id {
+            return Ok(None);
+        }
+
+        Ok(Some(Idpair { current_id, new_id }))
     }
 }
 
@@ -53,17 +56,17 @@ impl Idpair {
 pub fn get_map_from_pairs(pairs: Vec<String>) -> Result<HashMap<u32, u32>, anyhow::Error> {
     let mut idmap: HashMap<u32, u32> = HashMap::new();
     for pair in pairs {
-        match Idpair::from_string(&pair) {
-            Ok(u) => match idmap.insert(u.current_id, u.new_id) {
-                Some(_) => {
-                    // insert returns the value at that key if it already exists.
-                    // we can discard the value and return an error since we dont want dupes.
-                    bail!("Duplicate old id found in provided idpairs. Check your input data.")
-                }
-                // value inserted, nothing returned and we're good to go.
-                None => (),
-            },
-            Err(e) => bail!(e), // things like invalid pairs, etc
+        let maybe_u = Idpair::from_string(&pair)?;
+        if maybe_u.is_none() {
+            println!("Skipping idpair with identical old and new id: {}", pair);
+            continue;
+        }
+        let u = maybe_u.unwrap();
+        if let Some(_) = idmap.insert(u.current_id, u.new_id) {
+            // insert returns the value at that key if it already exists.
+            // we can discard the value and return an error since we dont want dupes.
+            bail!("Duplicate old id found in provided idpairs. Check your input data.")
+            // returns None if it doesnt exist, inserted successfully.
         }
     }
     Ok(idmap)

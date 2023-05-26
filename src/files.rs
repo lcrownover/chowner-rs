@@ -238,34 +238,28 @@ fn get_permission_operation(
 ///
 /// * `path` - Path to the object
 ///
-fn update_file_permissions(ctx: &Ctx, path: &Path) {
+fn update_file_permissions(ctx: &Ctx, path: &Path) -> Result<()> {
     let vp = &ctx.verbose_printer;
     vp.print1(format!("{} -> Processing file permissions", path.display()));
-    let fm = match get_file_metadata(path.as_ref()) {
-        Ok(fm) => fm,
-        Err(e) => {
-            eprintln!("{e}");
-            return;
-        }
-    };
+    let fm = get_file_metadata(path.as_ref())?;
 
     let mut ops: Vec<PermissionOperation> = vec![];
     if !ctx.uidmap.is_empty() {
-        match get_permission_operation(&ctx, &fm, path, PermissionType::User) {
-            Some(po) => ops.push(po),
-            None => (),
+        if let Some(po) = get_permission_operation(&ctx, &fm, path, PermissionType::User) {
+            ops.push(po);
         }
     }
     if !ctx.gidmap.is_empty() {
-        match get_permission_operation(&ctx, &fm, path, PermissionType::Group) {
-            Some(po) => ops.push(po),
-            None => (),
+        if let Some(po) = get_permission_operation(&ctx, &fm, path, PermissionType::Group) {
+            ops.push(po)
         }
     }
 
     for po in ops {
         set_file_permission(&ctx, &po);
     }
+
+    Ok(())
 }
 
 /// The primary function for processing paths.
@@ -278,7 +272,13 @@ fn update_file_permissions(ctx: &Ctx, path: &Path) {
 pub fn process_path(ctx: &Ctx, path: &Path) {
     // Update unix permissions
     if !ctx.skip_permissions {
-        update_file_permissions(&ctx, path);
+        match update_file_permissions(&ctx, path) {
+            Ok(_) => (),
+            Err(e) => {
+                eprintln!("{e}");
+                return;
+            }
+        };
     }
 
     // Modify the posix ACLs if flag was provided

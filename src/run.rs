@@ -19,7 +19,7 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
     // first check if we should exclude this path
     let exclude_paths = vec![".snapshots"];
     match path.to_str() {
-        None => return,
+        None => return, // skip non-utf8 paths
         Some(name) => {
             for ep in exclude_paths {
                 if name.ends_with(ep) {

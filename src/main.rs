@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::Parser;
 use util::VerbosePrinter;
 
@@ -54,19 +54,10 @@ fn main() -> Result<()> {
             .build_global()?;
     }
 
-    if let Err(e) = pairs::check_pairs(&args.uidpairs, &args.gidpairs) {
-        bail!(e)
-    }
+    pairs::check_pairs(&args.uidpairs, &args.gidpairs)?;
 
-    let uidmap = match pairs::get_map_from_pairs(args.uidpairs) {
-        Ok(m) => m,
-        Err(e) => bail!(e),
-    };
-
-    let gidmap = match pairs::get_map_from_pairs(args.gidpairs) {
-        Ok(m) => m,
-        Err(e) => bail!(e),
-    };
+    let uidmap = pairs::get_map_from_pairs(args.uidpairs)?;
+    let gidmap = pairs::get_map_from_pairs(args.gidpairs)?;
 
     let ctx = ctx::Ctx {
         noop: args.noop,
@@ -77,7 +68,6 @@ fn main() -> Result<()> {
         verbose_printer: VerbosePrinter::new(args.verbose),
     };
 
-    // here we go
     run::start(&ctx, &args.paths);
 
     Ok(())
