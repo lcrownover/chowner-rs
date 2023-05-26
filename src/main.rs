@@ -10,7 +10,7 @@ mod run;
 mod types;
 mod util;
 
-/// Blazingly fast filesystem modifier
+/// "Blazingly fast" filesystem modifier
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, arg_required_else_help(true))]
 struct Cli {
