@@ -57,17 +57,20 @@ pub fn get_map_from_pairs(pairs: Vec<String>) -> Result<HashMap<u32, u32>, anyho
     let mut idmap: HashMap<u32, u32> = HashMap::new();
     for pair in pairs {
         let maybe_u = Idpair::from_string(&pair)?;
-        if maybe_u.is_none() {
-            println!("Skipping idpair with identical old and new id: {}", pair);
-            continue;
-        }
-        let u = maybe_u.unwrap();
-        if let Some(_) = idmap.insert(u.current_id, u.new_id) {
-            // insert returns the value at that key if it already exists.
-            // we can discard the value and return an error since we dont want dupes.
-            bail!("Duplicate old id found in provided idpairs. Check your input data.")
-            // returns None if it doesnt exist, inserted successfully.
-        }
+        match maybe_u {
+            None => {
+                println!("Skipping idpair with identical old and new id: {}", pair);
+                continue;
+            }
+            Some(u) => {
+                if let Some(_) = idmap.insert(u.current_id, u.new_id) {
+                    // insert returns the value at that key if it already exists.
+                    // we can discard the value and return an error since we dont want dupes.
+                    bail!("Duplicate old id found in provided idpairs. Check your input data.")
+                    // returns None if it doesnt exist, inserted successfully.
+                }
+            }
+        };
     }
     Ok(idmap)
 }
