@@ -66,7 +66,10 @@ pub fn get_map_from_pairs(pairs: Vec<String>) -> Result<HashMap<u32, u32>, anyho
                 if let Some(_) = idmap.insert(u.current_id, u.new_id) {
                     // insert returns the value at that key if it already exists.
                     // we can discard the value and return an error since we dont want dupes.
-                    bail!("Duplicate old id found in provided idpairs. Check your input data.")
+                    bail!(
+                        "Duplicate old '{}' id found in provided idpairs. Check your input data.",
+                        u.current_id
+                    )
                     // returns None if it doesnt exist, inserted successfully.
                 }
             }
