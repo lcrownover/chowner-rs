@@ -54,7 +54,7 @@ fn main() -> Result<()> {
             .build_global()?;
     }
 
-    pairs::check_pairs(&args.uidpairs, &args.gidpairs)?;
+    // pairs::check_pairs(&args.uidpairs, &args.gidpairs)?;
 
     let uidmap = pairs::get_map_from_pairs(args.uidpairs)?;
     let gidmap = pairs::get_map_from_pairs(args.gidpairs)?;

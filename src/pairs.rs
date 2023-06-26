@@ -109,6 +109,13 @@ pub fn check_pair_duplicates(
     let dedup_len = dedups.len();
 
     if dupes_len != dedup_len {
+        let mut seen = vec![];
+        for id in allids {
+            if seen.contains(&id) {
+                println!("Duplicate ID found in source or destination pair: {}", id);
+            }
+            seen.push(id);
+        }
         bail!("Duplicate ID found in source or destination pair.")
     }
     Ok(())
