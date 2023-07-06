@@ -15,6 +15,8 @@ pub struct Ctx {
     pub uidmap: HashMap<u32, u32>,
     /// Map of old:new gids. Example 57:219883
     pub gidmap: HashMap<u32, u32>,
+    /// List of ignored paths
+    pub ignore_paths: Vec<String>,
     /// Reference to a verbose printer
     pub verbose_printer: VerbosePrinter,
 }

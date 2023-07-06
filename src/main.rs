@@ -37,6 +37,10 @@ struct Cli {
     #[arg(long, default_value_t = false)]
     skip_acls: bool,
 
+    /// ignore path patterns, comma separated
+    #[clap(long, value_parser, num_args = 0.., value_delimiter = ',')]
+    ignore_paths: Vec<String>,
+
     /// dry run, don't change anything
     #[arg(long)]
     noop: bool,
@@ -65,6 +69,7 @@ fn main() -> Result<()> {
         skip_acls: args.skip_acls,
         uidmap,
         gidmap,
+        ignore_paths: args.ignore_paths,
         verbose_printer: VerbosePrinter::new(args.verbose),
     };
 

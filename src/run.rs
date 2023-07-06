@@ -16,13 +16,13 @@ pub fn run_recurse(ctx: &Ctx, path: &Path) {
     // everything downstream should bail!() and bubble up here
     // if anything fails, we just error print, return a unit, and keep going
 
-    // first check if we should exclude this path
-    let exclude_paths = vec![".snapshots"];
+    // first check if we should ignore this path
+    let ignore_paths = &ctx.ignore_paths;
     match path.to_str() {
         None => return, // skip non-utf8 paths
         Some(name) => {
-            for ep in exclude_paths {
-                if name.ends_with(ep) {
+            for ip in ignore_paths {
+                if name.ends_with(ip) {
                     return;
                 }
             }
